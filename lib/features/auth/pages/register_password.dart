@@ -1,11 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
 import 'package:messenger_clone/features/auth/pages/confirmation_code_screen.dart';
 
-import '../../../common/services/auth_service.dart';
-import '../../../common/services/store.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
-import '../../../common/widgets/dialog/loading_dialog.dart';
+import 'package:messenger_clone/core/local/secure_storage.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import '../../../core/widgets/dialog/loading_dialog.dart';
 import 'login_screen.dart';
 
 class CreatePasswordScreen extends StatefulWidget {
@@ -135,57 +135,48 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           ),
                     );
 
-                    try {
-                      await AuthService.signUp(
-                        email: await Store.getEmailRegistered(),
-                        password: _passwordController.text,
-                        name: await Store.getNameRegistered(),
-                      );
-                      if (!context.mounted) return;
-                      Navigator.of(context).pop();
+                    final result = await GetIt.I<AuthRepository>().signUp(
+                      email: await Store.getEmailRegistered(),
+                      password: _passwordController.text,
+                      name: await Store.getNameRegistered(),
+                    );
 
-                      await CustomAlertDialog.show(
-                        context: context,
-                        title: "Success",
-                        message: "Account created successfully.",
-                      );
+                    if (!context.mounted) return;
+                    Navigator.of(context).pop(); // Close loading dialog
 
-                      await Store.setEmailRegistered("");
-                      await Store.setNameRegistered("");
-                      if (!context.mounted) return;
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                        (route) => false,
-                      );
-                    } on FirebaseAuthException catch (e) {
-                      if (!context.mounted) return;
-                      Navigator.of(context).pop();
+                    result.fold(
+                      (failure) async {
+                        // Failure flow
+                        String errorMessage =
+                            failure.message; // Assuming Failure has message
+                        // Map specific error messages if needed, though Repository usually handles it
+                        // Just showing generic error or failure message for now
+                        await CustomAlertDialog.show(
+                          context: context,
+                          title: "Error",
+                          message: errorMessage,
+                        );
+                      },
+                      (user) async {
+                        // Success flow
+                        await CustomAlertDialog.show(
+                          context: context,
+                          title: "Success",
+                          message: "Account created successfully.",
+                        );
 
-                      String errorMessage = "Error creating account";
-                      if (e.code == 'email-already-in-use') {
-                        errorMessage = "Email has been registered";
-                      } else if (e.code == 'weak-password') {
-                        errorMessage = "Password is too weak";
-                      } else if (e.code == 'invalid-email') {
-                        errorMessage = "Invalid email";
-                      }
-
-                      await CustomAlertDialog.show(
-                        context: context,
-                        title: "Error",
-                        message: errorMessage,
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      Navigator.of(context).pop();
-                      await CustomAlertDialog.show(
-                        context: context,
-                        title: "Error ",
-                        message:
-                            "An unexpected error occurred. : ${e.toString()}",
-                      );
-                    }
+                        await Store.setEmailRegistered("");
+                        await Store.setNameRegistered("");
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -244,3 +235,4 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     return hasUpperCase && hasLowerCase && hasNumber;
   }
 }
+

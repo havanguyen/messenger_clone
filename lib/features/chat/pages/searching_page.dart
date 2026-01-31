@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/routes/routes.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/routes/app_router.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/widgets/elements/custom_round_avatar.dart';
 import 'package:messenger_clone/features/chat/bloc/user_bloc.dart';
 import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 
@@ -86,7 +86,7 @@ class SearchingPage extends StatelessWidget {
                     onTap: () {
                       Navigator.pushNamed(
                         context,
-                        Routes.chat,
+                        AppRouter.chat,
                         arguments: user,
                       );
                     },
@@ -114,3 +114,4 @@ class SearchingPage extends StatelessWidget {
     );
   }
 }
+

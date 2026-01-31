@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/routes/routes.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/routes/app_router.dart';
 
-import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
+import 'package:messenger_clone/core/widgets/elements/custom_round_avatar.dart';
 import 'package:messenger_clone/features/chat/bloc/chat_item_bloc.dart';
 
 import 'package:messenger_clone/features/chat/pages/searching_page.dart';
@@ -115,7 +115,7 @@ class _ChatPageState extends State<ChatPage> {
                   onTap: () {
                     Navigator.of(
                       context,
-                    ).pushNamed(Routes.chat, arguments: item.groupMessage);
+                    ).pushNamed(AppRouter.chat, arguments: item.groupMessage);
                   },
                   onLongPress: (item) {
                     _showChatOptionsBottomSheet(context, item);
@@ -203,7 +203,7 @@ class _ChatPageState extends State<ChatPage> {
                             onTap: () {
                               Navigator.of(
                                 context,
-                              ).pushNamed(Routes.chat, arguments: user);
+                              ).pushNamed(AppRouter.chat, arguments: user);
                             },
                             onLongPress: () {
                               debugPrint("LongPress");
@@ -260,7 +260,7 @@ class _ChatPageState extends State<ChatPage> {
               ListTile(
                 leading: Icon(Icons.archive, color: context.theme.textColor),
                 title: Text(
-                  'Lưu trữ',
+                  'LÆ°u trá»¯',
                   style: TextStyle(color: context.theme.textColor),
                 ),
                 onTap: () {
@@ -271,7 +271,7 @@ class _ChatPageState extends State<ChatPage> {
               ListTile(
                 leading: Icon(Icons.person_add, color: context.theme.textColor),
                 title: Text(
-                  'Thêm thành viên',
+                  'ThÃªm thÃ nh viÃªn',
                   style: TextStyle(color: context.theme.textColor),
                 ),
                 onTap: () {
@@ -285,7 +285,7 @@ class _ChatPageState extends State<ChatPage> {
                   color: context.theme.textColor,
                 ),
                 title: Text(
-                  'Tắt thông báo',
+                  'Táº¯t thÃ´ng bÃ¡o',
                   style: TextStyle(color: context.theme.textColor),
                 ),
                 onTap: () {
@@ -296,7 +296,7 @@ class _ChatPageState extends State<ChatPage> {
               ListTile(
                 leading: Icon(Icons.markunread, color: context.theme.textColor),
                 title: Text(
-                  'Đánh dấu là chưa đọc',
+                  'ÄÃ¡nh dáº¥u lÃ  chÆ°a Ä‘á»c',
                   style: TextStyle(color: context.theme.textColor),
                 ),
                 onTap: () {
@@ -310,7 +310,7 @@ class _ChatPageState extends State<ChatPage> {
                   color: context.theme.textColor,
                 ),
                 title: Text(
-                  'Rời nhóm',
+                  'Rá»i nhÃ³m',
                   style: TextStyle(color: context.theme.textColor),
                 ),
                 onTap: () {
@@ -319,7 +319,7 @@ class _ChatPageState extends State<ChatPage> {
               ),
               ListTile(
                 leading: Icon(Icons.delete, color: context.theme.red),
-                title: Text('Xóa', style: TextStyle(color: context.theme.red)),
+                title: Text('XÃ³a', style: TextStyle(color: context.theme.red)),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -331,3 +331,4 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 }
+

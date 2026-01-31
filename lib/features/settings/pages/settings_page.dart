@@ -1,14 +1,16 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:messenger_clone/features/settings/pages/system_theme_settings_page.dart';
 import 'package:messenger_clone/features/settings/pages/change_password_page.dart';
-import '../../../common/extensions/custom_theme_extension.dart';
-import '../../../common/services/device_service.dart';
-import '../../../common/services/hive_service.dart';
-import '../../../common/services/user_service.dart';
-import '../../../common/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/features/settings/domain/repositories/device_repository.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
+
+import '../../../core/widgets/custom_text_style.dart';
 import '../../menu/pages/edit_profile_page.dart';
 import 'device_management.dart';
 
@@ -45,10 +47,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
     try {
       final currentUserId = await HiveService.instance.getCurrentUserId();
-      final result = await UserService.fetchUserDataById(currentUserId);
-      if (result.containsKey('error')) {
-        throw Exception(result['error']);
-      }
+      final userResult = await GetIt.I<UserRepository>().fetchUserDataById(
+        currentUserId,
+      );
+      final result = userResult.fold(
+        (l) => throw Exception(l.message),
+        (r) => r,
+      );
 
       userName = result['userName'] as String?;
       userId = result['userId'] as String?;
@@ -57,8 +62,13 @@ class _SettingsPageState extends State<SettingsPage> {
       photoUrl = result['photoUrl'] as String?;
 
       if (userId != null) {
-        final devices = await DeviceService.getUserDevices(userId!);
-        _devicesCount = devices.length;
+        final devicesResult = await GetIt.I<DeviceRepository>().getUserDevices(
+          userId!,
+        );
+        _devicesCount = devicesResult.fold(
+          (l) => 0, // Fallback to 0 on error
+          (r) => r.length,
+        );
       }
 
       setState(() {
@@ -76,9 +86,13 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
-        final newPhotoUrl = await UserService.uploadAndUpdatePhoto(
-          File(image.path),
-          userId!,
+        final result = await GetIt.I<UserRepository>().updatePhotoUrl(
+          imageFile: File(image.path),
+          userId: userId!,
+        );
+        final newPhotoUrl = result.fold(
+          (l) => throw Exception(l.message),
+          (r) => r,
         );
         setState(() {
           photoUrl = newPhotoUrl;
@@ -116,7 +130,10 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.photo_library, color: context.theme.textColor),
+              leading: Icon(
+                Icons.photo_library,
+                color: context.theme.textColor,
+              ),
               title: TitleText(
                 "Choose from Gallery",
                 fontSize: 16,
@@ -190,14 +207,16 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: _showImageOptions,
           child: CircleAvatar(
             radius: 30,
-            backgroundImage: photoUrl != null
-                ? (photoUrl!.startsWith('http')
-                ? NetworkImage(photoUrl!)
-                : FileImage(File(photoUrl!)) as ImageProvider)
-                : const AssetImage('assets/images/avatar.png'),
-            child: photoUrl == null
-                ? const Icon(Icons.camera_alt, color: Colors.grey)
-                : null,
+            backgroundImage:
+                photoUrl != null
+                    ? (photoUrl!.startsWith('http')
+                        ? NetworkImage(photoUrl!)
+                        : FileImage(File(photoUrl!)) as ImageProvider)
+                    : const AssetImage('assets/images/avatar.png'),
+            child:
+                photoUrl == null
+                    ? const Icon(Icons.camera_alt, color: Colors.grey)
+                    : null,
           ),
         ),
         const SizedBox(width: 16),
@@ -238,13 +257,14 @@ class _SettingsPageState extends State<SettingsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EditProfilePage(
-                    initialName: userName,
-                    initialEmail: email,
-                    initialAboutMe: aboutMe,
-                    initialPhotoUrl: photoUrl,
-                    userId: userId ?? '',
-                  ),
+                  builder:
+                      (context) => EditProfilePage(
+                        initialName: userName,
+                        initialEmail: email,
+                        initialAboutMe: aboutMe,
+                        initialPhotoUrl: photoUrl,
+                        userId: userId ?? '',
+                      ),
                 ),
               );
             },
@@ -252,7 +272,10 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildSettingItem(
             icon: Icons.shield,
             title: "Device Management",
-            notificationCount: _devicesCount == 0 ? null : _devicesCount, // Hiển thị số lượng thiết bị
+            notificationCount:
+                _devicesCount == 0
+                    ? null
+                    : _devicesCount, // Hiá»ƒn thá»‹ sá»‘ lÆ°á»£ng thiáº¿t bá»‹
             onTap: () {
               Navigator.push(
                 context,
@@ -328,11 +351,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: "Report an Issue",
             onTap: () {},
           ),
-          _buildSettingItem(
-            icon: Icons.help,
-            title: "Help",
-            onTap: () {},
-          ),
+          _buildSettingItem(icon: Icons.help, title: "Help", onTap: () {}),
         ],
       ),
     );
@@ -352,7 +371,11 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Row(
           children: [
-            Icon(icon, color: context.theme.textColor.withOpacity(0.7), size: 24),
+            Icon(
+              icon,
+              color: context.theme.textColor.withOpacity(0.7),
+              size: 24,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -400,3 +423,4 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
+

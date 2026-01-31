@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:messenger_clone/features/main_page/main_page.dart';
 
-import '../../../common/services/auth_service.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/app.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
+import 'package:messenger_clone/core/notifications/notification_helper.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
 import '../../auth/pages/login_screen.dart';
-import '../../../common/services/hive_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -27,10 +29,7 @@ class _SplashPageState extends State<SplashPage> {
       body: Center(
         child: Image.asset(
           "assets/images/aeck_logo.png",
-          width: MediaQuery
-              .of(context)
-              .size
-              .width * 0.6,
+          width: MediaQuery.of(context).size.width * 0.6,
         ),
       ),
     );
@@ -38,6 +37,11 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> redirect() async {
     await Future.delayed(const Duration(seconds: 1));
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+    NotificationService().initializeNotifications();
+    NotificationService().setNavigatorKey(navigatorKey);
     try {
       final currentUser = await HiveService.instance.getCurrentUserId();
       Navigator.pushAndRemoveUntil(
@@ -45,10 +49,9 @@ class _SplashPageState extends State<SplashPage> {
         MaterialPageRoute(
           builder:
               (BuildContext context) =>
-          currentUser.isNotEmpty ? MainPage() : LoginScreen(),
+                  currentUser.isNotEmpty ? MainPage() : LoginScreen(),
         ),
-            (route) => false
-        ,
+        (route) => false,
       );
     } catch (e) {
       await CustomAlertDialog.show(

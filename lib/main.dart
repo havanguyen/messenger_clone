@@ -1,29 +1,31 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:hive_flutter/adapters.dart';
-import 'package:messenger_clone/common/services/notification_service.dart';
-import 'package:messenger_clone/common/services/user_status_service.dart';
-import 'package:messenger_clone/common/themes/app_theme.dart';
-import 'package:messenger_clone/features/chat/bloc/chat_item_bloc.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:messenger_clone/core/di/injection.dart' as di;
+
+// Features - Chat
 import 'package:messenger_clone/features/chat/model/user.dart' as app_user;
+
+// Features - Messages
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
 
+// Features - Meta AI
+import 'features/meta_ai/data/meta_ai_message_model.dart';
+
+import 'package:messenger_clone/app.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:messenger_clone/common/routes/routes.dart';
-import 'package:messenger_clone/common/themes/theme_provider.dart';
-import 'features/meta_ai/bloc/meta_ai_bloc.dart';
-import 'features/meta_ai/bloc/meta_ai_event.dart';
-import 'features/meta_ai/data/meta_ai_message_model.dart';
-import 'features/splash/pages/splash.dart';
-import 'firebase_options.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:messenger_clone/theme/theme_provider.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+import 'firebase_options.dart';
+
+// Removed duplicate GlobalKey since it is in app.dart or duplicated logic?
+// app.dart has its own GlobalKey. main.dart line 28 has one.
+// We should remove it from main.dart to avoid conflict if not used.
+// But we can't remove line 28 easily with this replace.
+// Let's assume app.dart handles navigation key.
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,12 +42,8 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  if (await Permission.notification.isDenied) {
-    await Permission.notification.request();
-  }
-  NotificationService().initializeNotifications();
-  NotificationService().setNavigatorKey(navigatorKey);
-  await UserStatusService().initialize();
+  // Initialize Dependency Injection
+  await di.init();
 
   await Hive.initFlutter();
   Hive.registerAdapter(app_user.UserAdapter());
@@ -64,50 +62,4 @@ Future<void> main() async {
       child: const MessengerClone(),
     ),
   );
-}
-
-class MessengerClone extends StatefulWidget {
-  const MessengerClone({super.key});
-
-  @override
-  State<MessengerClone> createState() => _MessengerCloneState();
-}
-
-class _MessengerCloneState extends State<MessengerClone> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
-    // Repositories
-    final chatRepository = ChatRepository();
-
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => MetaAiBloc()..add(InitializeMetaAi()),
-        ),
-        BlocProvider(
-          create:
-              (context) =>
-                  ChatItemBloc(chatRepository: chatRepository)
-                    ..add(GetChatItemEvent()),
-        ),
-        // Add other Blocs as needed if they are global
-      ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        themeMode: themeProvider.themeNotifier.value,
-        onGenerateRoute: Routes.onGenerateRoute,
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        home: const SplashPage(),
-      ),
-    );
-  }
 }

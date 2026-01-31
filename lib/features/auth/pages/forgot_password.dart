@@ -1,10 +1,10 @@
-
-
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/services/opt_email_service.dart';
-import 'package:messenger_clone/common/widgets/dialog/custom_alert_dialog.dart';
-import 'package:messenger_clone/common/widgets/dialog/loading_dialog.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+// import 'package:messenger_clone/core/services/auth_service.dart'; // Removed
+import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 import 'package:messenger_clone/features/auth/pages/confirmation_code_screen.dart';
 import 'package:messenger_clone/features/auth/pages/reset_password.dart';
 
@@ -21,7 +21,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   void _validateInputs() {
     setState(() {
-      _emailError = _emailController.text.isEmpty ? 'Please enter your email' : null;
+      _emailError =
+          _emailController.text.isEmpty ? 'Please enter your email' : null;
     });
   }
 
@@ -63,7 +64,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 labelText: 'Email',
                 isDense: true,
                 labelStyle: TextStyle(
-                  color: _emailError != null ? Colors.red : const Color(0xFF9eabb3),
+                  color:
+                      _emailError != null
+                          ? Colors.red
+                          : const Color(0xFF9eabb3),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -74,9 +78,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   borderSide: const BorderSide(color: Colors.blue),
                 ),
                 errorText: _emailError,
-                suffixIcon: _emailError != null
-                    ? const Icon(Icons.error, color: Colors.red)
-                    : null,
+                suffixIcon:
+                    _emailError != null
+                        ? const Icon(Icons.error, color: Colors.red)
+                        : null,
                 errorStyle: const TextStyle(color: Colors.red),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -98,8 +103,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 onPressed: () async {
                   _validateInputs();
                   if (_emailController.text.isNotEmpty) {
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(_emailController.text)) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(_emailController.text)) {
                       await CustomAlertDialog.show(
                         context: context,
                         title: "Invalid Email",
@@ -110,55 +116,74 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) =>
-                      const LoadingDialog(message: "Checking email..."),
+                      builder:
+                          (context) =>
+                              const LoadingDialog(message: "Checking email..."),
                     );
                     try {
-                      final isRegistered = await AuthService.isEmailRegistered(
-                        _emailController.text,
-                      );
+                      final result = await GetIt.I<AuthRepository>()
+                          .isEmailRegistered(_emailController.text);
+
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
-                      if (!isRegistered) {
-                        await CustomAlertDialog.show(
-                          context: context,
-                          title: "Email Not Found",
-                          message:
-                          "This email is not registered. Please use a different email or create a new account.",
-                        );
-                      } else {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) =>
-                          const LoadingDialog(message: "Sending OTP..."),
-                        );
-                        final otp = OTPEmailService.generateOTP();
-                        await OTPEmailService.sendOTPEmail(
-                          _emailController.text,
-                          otp,
-                        );
-                        if (!context.mounted) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ConfirmationCodeScreen(
-                              email: _emailController.text,
-                              nextScreen: () => ResetPasswordScreen(
-                                email: _emailController.text,
+
+                      result.fold(
+                        (failure) async {
+                          await CustomAlertDialog.show(
+                            context: context,
+                            title: "System Error",
+                            message:
+                                "Unable to check email: ${failure.message}",
+                          );
+                        },
+                        (isRegistered) async {
+                          if (!isRegistered) {
+                            await CustomAlertDialog.show(
+                              context: context,
+                              title: "Email Not Found",
+                              message:
+                                  "This email is not registered. Please use a different email or create a new account.",
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (context) => const LoadingDialog(
+                                    message: "Sending OTP...",
+                                  ),
+                            );
+                            final otp = OTPEmailService.generateOTP();
+                            await OTPEmailService.sendOTPEmail(
+                              _emailController.text,
+                              otp,
+                            );
+                            if (!context.mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => ConfirmationCodeScreen(
+                                      email: _emailController.text,
+                                      nextScreen:
+                                          () => ResetPasswordScreen(
+                                            email: _emailController.text,
+                                          ),
+                                      action: () async {},
+                                    ),
                               ),
-                              action: () async {},
-                            ),
-                          ),
-                        );
-                      }
+                            );
+                          }
+                        },
+                      );
                     } catch (e) {
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
                       await CustomAlertDialog.show(
                         context: context,
                         title: "System Error",
-                        message: "Unable to check email. Please try again later.",
+                        message:
+                            "Unable to check email. Please try again later.",
                       );
                     }
                   }
@@ -182,3 +207,4 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 }
+

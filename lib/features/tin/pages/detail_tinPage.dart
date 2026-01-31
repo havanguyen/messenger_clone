@@ -1,10 +1,11 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:messenger_clone/features/tin/widgets/story_item.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/utils/date_time_extensions.dart';
+import '../../../core/widgets/dialog/custom_alert_dialog.dart';
 
 class StoryDetailPage extends StatefulWidget {
   final List<StoryItem> stories;
@@ -20,15 +21,17 @@ class StoryDetailPage extends StatefulWidget {
   State<StoryDetailPage> createState() => _StoryDetailPageState();
 }
 
-class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderStateMixin {
+class _StoryDetailPageState extends State<StoryDetailPage>
+    with TickerProviderStateMixin {
   late List<AnimationController> _progressControllers;
   late int _currentIndex;
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   VideoPlayerController? _nextVideoPlayerController;
-  ChewieController? _nextChewieController; // Thêm ChewieController cho tin sau
+  ChewieController? _nextChewieController; // ThÃªm ChewieController cho tin sau
   VideoPlayerController? _prevVideoPlayerController;
-  ChewieController? _prevChewieController; // Thêm ChewieController cho tin trước
+  ChewieController?
+  _prevChewieController; // ThÃªm ChewieController cho tin trÆ°á»›c
   bool _isPlaying = true;
   bool _isLoading = false;
   double _dragOffset = 0.0;
@@ -48,13 +51,19 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
     _updateAdjacentIndices();
     _progressControllers = List.generate(
       widget.stories.length,
-          (index) => AnimationController(vsync: this, duration: const Duration(seconds: 15)),
+      (index) => AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 15),
+      ),
     );
     _resetVideo();
   }
 
   void _updateAdjacentIndices() {
-    _nextIndex = _currentIndex < widget.stories.length - 1 ? _currentIndex + 1 : _currentIndex;
+    _nextIndex =
+        _currentIndex < widget.stories.length - 1
+            ? _currentIndex + 1
+            : _currentIndex;
     _prevIndex = _currentIndex > 0 ? _currentIndex - 1 : _currentIndex;
   }
 
@@ -121,13 +130,16 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
           _chewieController = _nextChewieController;
           _nextVideoPlayerController = null;
           _nextChewieController = null;
-        } else if (_prevVideoPlayerController != null && _currentIndex == _prevIndex) {
+        } else if (_prevVideoPlayerController != null &&
+            _currentIndex == _prevIndex) {
           _videoPlayerController = _prevVideoPlayerController;
           _chewieController = _prevChewieController;
           _prevVideoPlayerController = null;
           _prevChewieController = null;
         } else {
-          _videoPlayerController = VideoPlayerController.network(story.imageUrl);
+          _videoPlayerController = VideoPlayerController.network(
+            story.imageUrl,
+          );
         }
         await _videoPlayerController!.initialize();
         if (_isDisposed) return;
@@ -138,7 +150,8 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
             CustomAlertDialog.show(
               context: context,
               title: 'Error',
-              message: 'Invalid video duration. Using default duration of 15 seconds.',
+              message:
+                  'Invalid video duration. Using default duration of 15 seconds.',
               onPressed: () {
                 _progressControllers[_currentIndex] = AnimationController(
                   vsync: this,
@@ -149,7 +162,10 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                   autoPlay: true,
                   looping: true,
                   showControls: false,
-                  aspectRatio: _videoPlayerController!.value.aspectRatio.clamp(0.5, 2.0),
+                  aspectRatio: _videoPlayerController!.value.aspectRatio.clamp(
+                    0.5,
+                    2.0,
+                  ),
                 );
                 setState(() => _isLoading = false);
                 _startProgressForCurrentSequence();
@@ -169,7 +185,10 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
           autoPlay: true,
           looping: true,
           showControls: false,
-          aspectRatio: _videoPlayerController!.value.aspectRatio.clamp(0.5, 2.0),
+          aspectRatio: _videoPlayerController!.value.aspectRatio.clamp(
+            0.5,
+            2.0,
+          ),
         );
       } catch (e) {
         if (mounted) {
@@ -197,7 +216,9 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
     _nextChewieController = null;
     if (_nextIndex != _currentIndex && widget.stories[_nextIndex].isVideo) {
       try {
-        _nextVideoPlayerController = VideoPlayerController.network(widget.stories[_nextIndex].imageUrl);
+        _nextVideoPlayerController = VideoPlayerController.network(
+          widget.stories[_nextIndex].imageUrl,
+        );
         await _nextVideoPlayerController!.initialize();
         if (_isDisposed) {
           _nextVideoPlayerController?.dispose();
@@ -209,7 +230,10 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
           autoPlay: false,
           looping: false,
           showControls: false,
-          aspectRatio: _nextVideoPlayerController!.value.aspectRatio.clamp(0.5, 2.0),
+          aspectRatio: _nextVideoPlayerController!.value.aspectRatio.clamp(
+            0.5,
+            2.0,
+          ),
         );
       } catch (e) {
         if (mounted) {
@@ -232,7 +256,9 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
     _prevChewieController = null;
     if (_prevIndex != _currentIndex && widget.stories[_prevIndex].isVideo) {
       try {
-        _prevVideoPlayerController = VideoPlayerController.network(widget.stories[_prevIndex].imageUrl);
+        _prevVideoPlayerController = VideoPlayerController.network(
+          widget.stories[_prevIndex].imageUrl,
+        );
         await _prevVideoPlayerController!.initialize();
         if (_isDisposed) {
           _prevVideoPlayerController?.dispose();
@@ -244,7 +270,10 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
           autoPlay: false,
           looping: false,
           showControls: false,
-          aspectRatio: _prevVideoPlayerController!.value.aspectRatio.clamp(0.5, 2.0),
+          aspectRatio: _prevVideoPlayerController!.value.aspectRatio.clamp(
+            0.5,
+            2.0,
+          ),
         );
       } catch (e) {
         if (mounted) {
@@ -301,11 +330,16 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
     if (_isDisposed || !_isDragging) return;
     setState(() => _isDragging = false);
     if (_dragOffset.abs() > 0.3) {
-      if (_dragOffset < 0 && _currentIndex < widget.stories.length - 1) _nextStory();
-      else if (_dragOffset > 0 && _currentIndex > 0) _previousStory();
+      if (_dragOffset < 0 && _currentIndex < widget.stories.length - 1) {
+        _nextStory();
+      } else if (_dragOffset > 0 && _currentIndex > 0)
+        _previousStory();
     } else if (details.primaryVelocity != null) {
-      if (details.primaryVelocity! > 500 && _currentIndex > 0) _previousStory();
-      else if (details.primaryVelocity! < -500 && _currentIndex < widget.stories.length - 1) _nextStory();
+      if (details.primaryVelocity! > 500 && _currentIndex > 0) {
+        _previousStory();
+      } else if (details.primaryVelocity! < -500 &&
+          _currentIndex < widget.stories.length - 1)
+        _nextStory();
     } else {
       _startProgressForCurrentSequence();
     }
@@ -313,17 +347,24 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
   }
 
   void _handleVerticalDrag(DragEndDetails details) {
-    if (_isDisposed || details.primaryVelocity == null || details.primaryVelocity! <= 300) return;
+    if (_isDisposed ||
+        details.primaryVelocity == null ||
+        details.primaryVelocity! <= 300) {
+      return;
+    }
     Navigator.of(context).pop();
   }
 
   void _handleTap(TapDetails details) {
     if (_isDisposed) return;
     final width = MediaQuery.of(context).size.width;
-    if (details.localPosition.dx < width * 0.3 && _currentIndex > 0) _previousStory();
-    else if (details.localPosition.dx > width * 0.7 && _currentIndex < widget.stories.length - 1)
+    if (details.localPosition.dx < width * 0.3 && _currentIndex > 0) {
+      _previousStory();
+    } else if (details.localPosition.dx > width * 0.7 &&
+        _currentIndex < widget.stories.length - 1)
       _nextStory();
-    else if (widget.stories[_currentIndex].isVideo && _videoPlayerController != null)
+    else if (widget.stories[_currentIndex].isVideo &&
+        _videoPlayerController != null)
       _togglePlayPause();
   }
 
@@ -338,7 +379,9 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    if (_currentIndex >= widget.stories.length) return const Scaffold(backgroundColor: Colors.black);
+    if (_currentIndex >= widget.stories.length) {
+      return const Scaffold(backgroundColor: Colors.black);
+    }
     final story = widget.stories[_currentIndex];
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
@@ -351,7 +394,9 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
         onHorizontalDragUpdate: _handleDragUpdate,
         onHorizontalDragEnd: _handleDragEnd,
         onVerticalDragEnd: _handleVerticalDrag,
-        onTapUp: (details) => _handleTap(TapDetails(localPosition: details.localPosition)),
+        onTapUp:
+            (details) =>
+                _handleTap(TapDetails(localPosition: details.localPosition)),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -364,32 +409,48 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                   child: SizedBox(
                     width: width,
                     height: height,
-                    child: widget.stories[_prevIndex].isVideo && _prevChewieController != null
-                        ? Chewie(controller: _prevChewieController!)
-                        : CachedNetworkImage(
-                      imageUrl: widget.stories[_prevIndex].imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
-                      errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
-                    ),
+                    child:
+                        widget.stories[_prevIndex].isVideo &&
+                                _prevChewieController != null
+                            ? Chewie(controller: _prevChewieController!)
+                            : CachedNetworkImage(
+                              imageUrl: widget.stories[_prevIndex].imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder:
+                                  (_, __) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                              errorWidget:
+                                  (_, __, ___) => const Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                  ),
+                            ),
                   ),
                 ),
               ),
             Center(
               child: Transform(
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..translate(width * dragFactor * 0.5)
-                  ..rotateY(dragFactor * 0.3)
-                  ..scale(1.0 - dragFactor.abs() * 0.2),
-                child: (story.isVideo) && _chewieController != null
-                    ? Chewie(controller: _chewieController!)
-                    : CachedNetworkImage(
-                  imageUrl: story.imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
-                  errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
-                ),
+                transform:
+                    Matrix4.identity()
+                      ..setEntry(3, 2, 0.001)
+                      ..translate(width * dragFactor * 0.5)
+                      ..rotateY(dragFactor * 0.3)
+                      ..scale(1.0 - dragFactor.abs() * 0.2),
+                child:
+                    (story.isVideo) && _chewieController != null
+                        ? Chewie(controller: _chewieController!)
+                        : CachedNetworkImage(
+                          imageUrl: story.imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder:
+                              (_, __) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                          errorWidget:
+                              (_, __, ___) =>
+                                  const Icon(Icons.error, color: Colors.red),
+                        ),
               ),
             ),
             if (_isDragging && _currentIndex < widget.stories.length - 1)
@@ -401,18 +462,30 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                   child: SizedBox(
                     width: width,
                     height: height,
-                    child: widget.stories[_nextIndex].isVideo && _nextChewieController != null
-                        ? Chewie(controller: _nextChewieController!)
-                        : CachedNetworkImage(
-                      imageUrl: widget.stories[_nextIndex].imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
-                      errorWidget: (_, __, ___) => const Icon(Icons.error, color: Colors.red),
-                    ),
+                    child:
+                        widget.stories[_nextIndex].isVideo &&
+                                _nextChewieController != null
+                            ? Chewie(controller: _nextChewieController!)
+                            : CachedNetworkImage(
+                              imageUrl: widget.stories[_nextIndex].imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder:
+                                  (_, __) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                              errorWidget:
+                                  (_, __, ___) => const Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                  ),
+                            ),
                   ),
                 ),
               ),
-            if (_isLoading) const Center(child: CircularProgressIndicator(color: Colors.white)),
+            if (_isLoading)
+              const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
             Positioned(
               top: 28,
               left: 8,
@@ -430,15 +503,21 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                         borderRadius: BorderRadius.circular(8),
                         child: AnimatedBuilder(
                           animation: _progressControllers[index],
-                          builder: (_, __) => LinearProgressIndicator(
-                            value: index < _currentIndex
-                                ? 1.0
-                                : index == _currentIndex
-                                ? _progressControllers[index].value
-                                : 0.0,
-                            backgroundColor: context.theme.grey.withOpacity(0.3),
-                            valueColor: AlwaysStoppedAnimation<Color>(context.theme.white),
-                          ),
+                          builder:
+                              (_, __) => LinearProgressIndicator(
+                                value:
+                                    index < _currentIndex
+                                        ? 1.0
+                                        : index == _currentIndex
+                                        ? _progressControllers[index].value
+                                        : 0.0,
+                                backgroundColor: context.theme.grey.withOpacity(
+                                  0.3,
+                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  context.theme.white,
+                                ),
+                              ),
                         ),
                       ),
                     ),
@@ -457,7 +536,9 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                     children: [
                       CircleAvatar(
                         radius: 18,
-                        backgroundImage: CachedNetworkImageProvider(story.avatarUrl),
+                        backgroundImage: CachedNetworkImageProvider(
+                          story.avatarUrl,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Column(
@@ -466,13 +547,17 @@ class _StoryDetailPageState extends State<StoryDetailPage> with TickerProviderSt
                           Text(
                             story.title,
                             style: TextStyle(
-                                color: context.theme.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold),
+                              color: context.theme.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Text(
                             _formatPostedTime(story.postedAt),
-                            style: TextStyle(color: context.theme.white.withOpacity(0.9), fontSize: 12),
+                            style: TextStyle(
+                              color: context.theme.white.withOpacity(0.9),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),

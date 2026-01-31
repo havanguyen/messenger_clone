@@ -78,10 +78,10 @@ class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
                     aspectRatio: 1 / widget.controller.value.aspectRatio,
                     child: Container(
                       clipBehavior: Clip.hardEdge,
-                      child: VideoPlayer(widget.controller),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      child: VideoPlayer(widget.controller),
                     ),
                   ),
                 ),

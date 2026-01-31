@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:messenger_clone/features/chat/model/user.dart';
 
 abstract class AddMemberGroupEvent extends Equatable {
   const AddMemberGroupEvent();

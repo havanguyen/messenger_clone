@@ -1,17 +1,17 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
 // appwrite code removed
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/common/widgets/elements/custom_message_item.dart';
-import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/widgets/elements/custom_message_item.dart';
+import 'package:messenger_clone/core/widgets/elements/custom_round_avatar.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
-import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
+import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc.dart';
 import 'package:messenger_clone/features/messages/data/repositories/chat_repository_impl.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
 
@@ -133,7 +133,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           avatarGroupUrl: state.groupMessage.avatarGroupUrl,
                           callFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lỗi: meId hoặc others rỗng');
+                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -143,7 +143,7 @@ class _MessagesPageState extends State<MessagesPage> {
                               }
                             }
                             if (participants.length < 2) {
-                              debugPrint('Lỗi: Không đủ participants để gọi');
+                              debugPrint('Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i');
                               return;
                             }
                             participants.sort();
@@ -154,13 +154,13 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             callID = hashCallID(callID);
                             debugPrint(
-                              'Gửi thông báo gọi với callID: $callID, participants: $participants',
+                              'Gá»­i thÃ´ng bÃ¡o gá»i vá»›i callID: $callID, participants: $participants',
                             );
                             debugPrint('Voice call disabled');
                           },
                           videoCallFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lỗi: meId hoặc others rỗng');
+                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -171,7 +171,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             if (participants.length < 2) {
                               debugPrint(
-                                'Lỗi: Không đủ participants để gọi video',
+                                'Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i video',
                               );
                               return;
                             }
@@ -183,7 +183,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             callID = hashCallID(callID);
                             debugPrint(
-                              'Gửi thông báo gọi video với callID: $callID, participants: $participants',
+                              'Gá»­i thÃ´ng bÃ¡o gá»i video vá»›i callID: $callID, participants: $participants',
                             );
                             debugPrint('Video call disabled');
                           },
@@ -208,7 +208,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           user: state.others.first,
                           callFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lỗi: meId hoặc others rỗng');
+                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -218,7 +218,7 @@ class _MessagesPageState extends State<MessagesPage> {
                               }
                             }
                             if (participants.length < 2) {
-                              debugPrint('Lỗi: Không đủ participants để gọi');
+                              debugPrint('Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i');
                               return;
                             }
                             participants.sort();
@@ -229,13 +229,13 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             callID = hashCallID(callID);
                             debugPrint(
-                              'Gửi thông báo gọi với callID: $callID, participants: $participants',
+                              'Gá»­i thÃ´ng bÃ¡o gá»i vá»›i callID: $callID, participants: $participants',
                             );
                             debugPrint('Voice call disabled');
                           },
                           videoCallFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lỗi: meId hoặc others rỗng');
+                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -246,7 +246,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             if (participants.length < 2) {
                               debugPrint(
-                                'Lỗi: Không đủ participants để gọi video',
+                                'Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i video',
                               );
                               return;
                             }
@@ -258,7 +258,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             }
                             callID = hashCallID(callID);
                             debugPrint(
-                              'Gửi thông báo gọi video với callID: $callID, participants: $participants',
+                              'Gá»­i thÃ´ng bÃ¡o gá»i video vá»›i callID: $callID, participants: $participants',
                             );
                             debugPrint('Video call disabled');
                           },
@@ -448,3 +448,5 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 }
+
+

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/services/opt_email_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
 
-import '../../../common/services/auth_service.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
-import '../../../common/widgets/dialog/loading_dialog.dart';
+// import '../../../core/services/auth_service.dart'; // Removed
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import '../../../core/widgets/dialog/loading_dialog.dart';
 import 'confirmation_code_screen.dart';
 import 'login_screen.dart';
 
@@ -117,48 +119,64 @@ class _EmailInputScreenState extends State<EmailInputScreen> {
                               const LoadingDialog(message: "Checking email..."),
                     );
                     try {
-                      final isRegistered =
-                          await AuthService.isEmailRegistered(
-                            _emailController.text,
-                          );
+                      final result = await GetIt.I<AuthRepository>()
+                          .isEmailRegistered(_emailController.text);
+
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
-                      if (isRegistered) {
-                        await CustomAlertDialog.show(
-                          context: context,
-                          title: "Email already exists",
-                          message:
-                              "This email is already registered. Please use another email.",
-                        );
-                      } else {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder:
-                              (context) => const LoadingDialog(
-                                message: "Sending OTP...",
+
+                      result.fold(
+                        (failure) async {
+                          await CustomAlertDialog.show(
+                            context: context,
+                            title: "System error",
+                            message:
+                                "Unable to check email: ${failure.message}",
+                          );
+                        },
+                        (isRegistered) async {
+                          if (isRegistered) {
+                            await CustomAlertDialog.show(
+                              context: context,
+                              title: "Email already exists",
+                              message:
+                                  "This email is already registered. Please use another email.",
+                            );
+                          } else {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (context) => const LoadingDialog(
+                                    message: "Sending OTP...",
+                                  ),
+                            );
+                            final otp = OTPEmailService.generateOTP();
+                            await OTPEmailService.sendOTPEmail(
+                              _emailController.text,
+                              otp,
+                            );
+                            if (!context.mounted) return;
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => ConfirmationCodeScreen(
+                                      email: _emailController.text,
+                                    ),
                               ),
-                        );
-                        final otp = OTPEmailService.generateOTP();
-                        await OTPEmailService.sendOTPEmail(
-                          _emailController.text,
-                          otp,
-                        );
-                        if (!context.mounted) return;
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => ConfirmationCodeScreen(
-                                  email: _emailController.text,
-                                ),
-                          ),
-                          (route) => false,
-                        );
-                      }
+                              (route) => false,
+                            );
+                          }
+                        },
+                      );
                     } catch (e) {
                       if (!context.mounted) return;
-                      Navigator.of(context).pop();
+                      // Navigator.of(context).pop(); // Safety pop if not handled
+                      if (Navigator.canPop(context)) {
+                        Navigator.of(context).pop();
+                      }
+
                       await CustomAlertDialog.show(
                         context: context,
                         title: "System error",
@@ -203,3 +221,4 @@ class _EmailInputScreenState extends State<EmailInputScreen> {
     );
   }
 }
+

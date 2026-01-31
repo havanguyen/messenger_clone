@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:messenger_clone/features/auth/pages/register_email.dart';
-import '../../../common/services/store.dart';
+import 'package:messenger_clone/core/local/secure_storage.dart';
 import 'login_screen.dart';
 
 class NameInputScreen extends StatefulWidget {
@@ -18,8 +18,14 @@ class _NameInputScreenState extends State<NameInputScreen> {
 
   void _validateInputs() {
     setState(() {
-      _firstNameError = _firstNameController.text.isEmpty ? 'Please enter your first name' : null;
-      _lastNameError = _lastNameController.text.isEmpty ? 'Please enter your last name' : null;
+      _firstNameError =
+          _firstNameController.text.isEmpty
+              ? 'Please enter your first name'
+              : null;
+      _lastNameError =
+          _lastNameController.text.isEmpty
+              ? 'Please enter your last name'
+              : null;
     });
   }
 
@@ -51,10 +57,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
             const SizedBox(height: 12),
             const Text(
               "Enter the name you use in real life.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.white),
             ),
             const SizedBox(height: 40),
             Row(
@@ -67,8 +70,11 @@ class _NameInputScreenState extends State<NameInputScreen> {
                       labelText: 'Last name',
                       isDense: true,
                       labelStyle: TextStyle(
-                          color: _lastNameError != null
-                              ? Colors.red : const Color(0xFF9eabb3)),
+                        color:
+                            _lastNameError != null
+                                ? Colors.red
+                                : const Color(0xFF9eabb3),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(color: Colors.grey),
@@ -77,16 +83,18 @@ class _NameInputScreenState extends State<NameInputScreen> {
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(color: Colors.blue),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 20,
+                      ),
                       errorText: _lastNameError,
-                      suffixIcon: _lastNameError != null
-                          ? const Icon(Icons.error, color: Colors.red)
-                          : null,
+                      suffixIcon:
+                          _lastNameError != null
+                              ? const Icon(Icons.error, color: Colors.red)
+                              : null,
                       errorStyle: const TextStyle(color: Colors.red),
                     ),
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(color: Colors.white),
                     onChanged: (value) {
                       setState(() {
                         _lastNameError = null;
@@ -102,8 +110,11 @@ class _NameInputScreenState extends State<NameInputScreen> {
                       labelText: 'First name',
                       isDense: true,
                       labelStyle: TextStyle(
-                          color: _firstNameError != null
-                              ? Colors.red : const Color(0xFF9eabb3)),
+                        color:
+                            _firstNameError != null
+                                ? Colors.red
+                                : const Color(0xFF9eabb3),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(color: Colors.grey),
@@ -112,16 +123,18 @@ class _NameInputScreenState extends State<NameInputScreen> {
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(color: Colors.blue),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 20,
+                      ),
                       errorText: _firstNameError,
-                      suffixIcon: _firstNameError != null
-                          ? const Icon(Icons.error, color: Colors.red)
-                          : null,
+                      suffixIcon:
+                          _firstNameError != null
+                              ? const Icon(Icons.error, color: Colors.red)
+                              : null,
                       errorStyle: const TextStyle(color: Colors.red),
                     ),
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(color: Colors.white),
                     onChanged: (value) {
                       setState(() {
                         _firstNameError = null;
@@ -139,7 +152,9 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 onPressed: () {
                   _validateInputs();
                   if (_firstNameError == null && _lastNameError == null) {
-                    Store.setNameRegistered("${_firstNameController.text} ${_lastNameController.text}");
+                    Store.setNameRegistered(
+                      "${_firstNameController.text} ${_lastNameController.text}",
+                    );
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -156,10 +171,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 ),
                 child: const Text(
                   'Next',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
             ),
@@ -174,10 +186,7 @@ class _NameInputScreenState extends State<NameInputScreen> {
                 },
                 child: const Text(
                   'I already have an account',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.blue,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.blue),
                 ),
               ),
             ),

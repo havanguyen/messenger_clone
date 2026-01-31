@@ -3,13 +3,16 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/rendering.dart';
-import 'package:messenger_clone/common/services/story_service.dart';
-import 'package:messenger_clone/common/services/user_service.dart';
+// import 'package:messenger_clone/core/services/story_service.dart'; // Removed
+import 'package:messenger_clone/features/story/domain/repositories/story_repository.dart';
+import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
 import 'package:messenger_clone/features/main_page/main_page.dart';
 import 'dart:ui' as ui;
-import '../../../common/services/auth_service.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
-import '../../../common/widgets/dialog/loading_dialog.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import '../../../core/widgets/dialog/loading_dialog.dart';
 import '../widgets/story_item.dart';
 
 class GallerySelectionPage extends StatefulWidget {
@@ -38,8 +41,14 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
   double _brushSize = 5.0;
 
   final List<Sticker> _stickers = [
-    Sticker(asset: 'assets/sticker/sticker1.png', position: const Offset(50, 50)),
-    Sticker(asset: 'assets/sticker/sticker2.png', position: const Offset(150, 50)),
+    Sticker(
+      asset: 'assets/sticker/sticker1.png',
+      position: const Offset(50, 50),
+    ),
+    Sticker(
+      asset: 'assets/sticker/sticker2.png',
+      position: const Offset(150, 50),
+    ),
   ];
   final List<Sticker> _addedStickers = [];
 
@@ -99,8 +108,16 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
   }
 
   Future<void> _switchCamera() async {
-    if (_cameras == null || _cameras!.length <= 1 || !_cameraAvailable || !_isCameraInitialized) return;
-    final newCamera = _cameraController!.description == _cameras![0] ? _cameras![1] : _cameras![0];
+    if (_cameras == null ||
+        _cameras!.length <= 1 ||
+        !_cameraAvailable ||
+        !_isCameraInitialized) {
+      return;
+    }
+    final newCamera =
+        _cameraController!.description == _cameras![0]
+            ? _cameras![1]
+            : _cameras![0];
     setState(() => _isLoading = true);
     await _cameraController?.stopVideoRecording().catchError((_) {});
     await _cameraController?.dispose();
@@ -209,9 +226,10 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
       builder: (context) => const LoadingDialog(message: 'Selecting media...'),
     );
     try {
-      XFile? pickedFile = _isVideoMode
-          ? await _picker.pickVideo(source: ImageSource.gallery)
-          : await _picker.pickImage(source: ImageSource.gallery);
+      XFile? pickedFile =
+          _isVideoMode
+              ? await _picker.pickVideo(source: ImageSource.gallery)
+              : await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null && mounted) {
         setState(() {
           _capturedMedia = File(pickedFile.path);
@@ -252,7 +270,9 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
       builder: (context) => const LoadingDialog(message: 'Merging image...'),
     );
     try {
-      final RenderRepaintBoundary boundary = _repaintBoundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final RenderRepaintBoundary boundary =
+          _repaintBoundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final uint8List = byteData!.buffer.asUint8List();
@@ -285,7 +305,7 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
       barrierDismissible: false,
       builder: (context) => const LoadingDialog(message: 'Uploading...'),
     );
-    final userId = await AuthService.isLoggedIn();
+    final userId = await GetIt.I<AuthRepository>().isLoggedIn();
     if (userId == null) {
       Navigator.of(context).pop();
       if (mounted) {
@@ -298,12 +318,19 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
       return null;
     }
     try {
-      final mediaUrl = await StoryService.postStory(
+      final result = await GetIt.I<StoryRepository>().postStory(
         userId: userId,
         mediaFile: file,
         mediaType: isVideo ? 'video' : 'image',
       );
-      final userData = await UserService.fetchUserDataById(userId);
+      final mediaUrl = result.fold((l) => throw Exception(l.message), (r) => r);
+      final userResult = await GetIt.I<UserRepository>().fetchUserDataById(
+        userId,
+      );
+      final userData = userResult.fold(
+        (l) => <String, dynamic>{'userName': 'You', 'photoUrl': ''},
+        (r) => r,
+      );
       final newStory = StoryItem(
         userId: userId,
         title: userData['userName'] as String? ?? 'You',
@@ -324,7 +351,7 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => const MainPage()),
-                  (route) => false,
+              (route) => false,
             );
           },
         );
@@ -492,11 +519,7 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
             });
           }
         },
-        child: Image.asset(
-          sticker.asset,
-          width: 100,
-          height: 100,
-        ),
+        child: Image.asset(sticker.asset, width: 100, height: 100),
       ),
     );
   }
@@ -516,7 +539,10 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                 Container(
                   height: topSectionHeight * 0.6,
                   color: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
@@ -524,21 +550,40 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
-                          if (_isRecording && _cameraAvailable && _isCameraInitialized)
+                          if (_isRecording &&
+                              _cameraAvailable &&
+                              _isCameraInitialized)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.8),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
+                                  Icon(
+                                    Icons.fiber_manual_record,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 6),
-                                  Text('Recording', style: TextStyle(color: Colors.white, fontSize: 14)),
+                                  Text(
+                                    'Recording',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -549,38 +594,76 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.photo_library, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.photo_library,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             onPressed: _getMediaFromGallery,
                           ),
                           Row(
                             children: [
                               GestureDetector(
-                                onTap: () => setState(() => _isVideoMode = false),
+                                onTap:
+                                    () => setState(() => _isVideoMode = false),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _isVideoMode ? Colors.black.withOpacity(0.8) : Colors.white,
+                                    color:
+                                        _isVideoMode
+                                            ? Colors.black.withOpacity(0.8)
+                                            : Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Text('Photo', style: TextStyle(color: _isVideoMode ? Colors.white : Colors.black)),
+                                  child: Text(
+                                    'Photo',
+                                    style: TextStyle(
+                                      color:
+                                          _isVideoMode
+                                              ? Colors.white
+                                              : Colors.black,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
                               GestureDetector(
-                                onTap: () => setState(() => _isVideoMode = true),
+                                onTap:
+                                    () => setState(() => _isVideoMode = true),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _isVideoMode ? Colors.white : Colors.black.withOpacity(0.8),
+                                    color:
+                                        _isVideoMode
+                                            ? Colors.white
+                                            : Colors.black.withOpacity(0.8),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Text('Video', style: TextStyle(color: _isVideoMode ? Colors.black : Colors.white)),
+                                  child: Text(
+                                    'Video',
+                                    style: TextStyle(
+                                      color:
+                                          _isVideoMode
+                                              ? Colors.black
+                                              : Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.flip_camera_ios,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             onPressed: _switchCamera,
                           ),
                         ],
@@ -591,36 +674,56 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                 Container(
                   height: screenHeight - (topSectionHeight * 0.6),
                   color: Colors.black,
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                      : !_cameraAvailable || !_isCameraInitialized
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text('Camera not available', style: TextStyle(color: Colors.white)),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _getMediaFromGallery,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                          ),
-                          child: Text(_isVideoMode ? 'Select video' : 'Select photo'),
-                        ),
-                      ],
-                    ),
-                  )
-                      : CameraPreview(_cameraController!),
+                  child:
+                      _isLoading
+                          ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                          : !_cameraAvailable || !_isCameraInitialized
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Camera not available',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton(
+                                  onPressed: _getMediaFromGallery,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 15,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _isVideoMode
+                                        ? 'Select video'
+                                        : 'Select photo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          : CameraPreview(_cameraController!),
                 ),
               ],
             )
@@ -628,8 +731,16 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
             RepaintBoundary(
               key: _repaintBoundaryKey,
               child: GestureDetector(
-                onPanStart: (details) => _isDrawingMode ? _startDrawing(details.localPosition) : null,
-                onPanUpdate: (details) => _isDrawingMode ? _updateDrawing(details.localPosition) : null,
+                onPanStart:
+                    (details) =>
+                        _isDrawingMode
+                            ? _startDrawing(details.localPosition)
+                            : null,
+                onPanUpdate:
+                    (details) =>
+                        _isDrawingMode
+                            ? _updateDrawing(details.localPosition)
+                            : null,
                 onPanEnd: (details) => _isDrawingMode ? _endDrawing() : null,
                 child: Stack(
                   children: [
@@ -645,12 +756,16 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                       painter: DrawingPainter(_drawLayers),
                       child: const SizedBox.expand(),
                     ),
-                    ..._addedStickers.map((sticker) => _buildSticker(sticker)).toList(),
+                    ..._addedStickers
+                        .map((sticker) => _buildSticker(sticker))
+                        ,
                   ],
                 ),
               ),
             ),
-          if (_capturedMedia == null && _cameraAvailable && _isCameraInitialized)
+          if (_capturedMedia == null &&
+              _cameraAvailable &&
+              _isCameraInitialized)
             Positioned(
               bottom: 30,
               left: 0,
@@ -663,7 +778,13 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: _isVideoMode && _isRecording ? Colors.red : Colors.white, width: 4),
+                      border: Border.all(
+                        color:
+                            _isVideoMode && _isRecording
+                                ? Colors.red
+                                : Colors.white,
+                        width: 4,
+                      ),
                       color: Colors.white,
                     ),
                     child: Center(
@@ -671,8 +792,14 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          shape: _isVideoMode && _isRecording ? BoxShape.rectangle : BoxShape.circle,
-                          color: _isVideoMode && _isRecording ? Colors.red : Colors.white,
+                          shape:
+                              _isVideoMode && _isRecording
+                                  ? BoxShape.rectangle
+                                  : BoxShape.circle,
+                          color:
+                              _isVideoMode && _isRecording
+                                  ? Colors.red
+                                  : Colors.white,
                         ),
                       ),
                     ),
@@ -793,16 +920,24 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                       children: [
                         DropdownButton<Color>(
                           value: _drawColor,
-                          items: [
-                            Colors.red,
-                            Colors.blue,
-                            Colors.green,
-                            Colors.yellow,
-                            Colors.black,
-                          ].map((color) => DropdownMenuItem<Color>(
-                            value: color,
-                            child: CircleAvatar(backgroundColor: color, radius: 10),
-                          )).toList(),
+                          items:
+                              [
+                                    Colors.red,
+                                    Colors.blue,
+                                    Colors.green,
+                                    Colors.yellow,
+                                    Colors.black,
+                                  ]
+                                  .map(
+                                    (color) => DropdownMenuItem<Color>(
+                                      value: color,
+                                      child: CircleAvatar(
+                                        backgroundColor: color,
+                                        radius: 10,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                           onChanged: (value) {
                             setState(() {
                               _drawColor = value!;
@@ -859,11 +994,7 @@ class DrawLayer {
     required this.brushSize,
   });
 
-  DrawLayer copyWith({
-    List<Offset>? points,
-    Color? color,
-    double? brushSize,
-  }) {
+  DrawLayer copyWith({List<Offset>? points, Color? color, double? brushSize}) {
     return DrawLayer(
       points: points ?? this.points,
       color: color ?? this.color,
@@ -880,10 +1011,11 @@ class DrawingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (var layer in layers) {
-      final paint = Paint()
-        ..color = layer.color
-        ..strokeWidth = layer.brushSize
-        ..strokeCap = StrokeCap.round;
+      final paint =
+          Paint()
+            ..color = layer.color
+            ..strokeWidth = layer.brushSize
+            ..strokeCap = StrokeCap.round;
 
       for (int i = 0; i < layer.points.length - 1; i++) {
         canvas.drawLine(layer.points[i], layer.points[i + 1], paint);
@@ -908,3 +1040,4 @@ class Sticker {
     );
   }
 }
+

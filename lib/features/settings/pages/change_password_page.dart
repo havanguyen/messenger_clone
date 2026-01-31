@@ -1,11 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/common/widgets/dialog/custom_alert_dialog.dart';
-import 'package:messenger_clone/common/widgets/dialog/loading_dialog.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 
-import '../../../common/services/auth_service.dart';
 import '../../main_page/main_page.dart';
 
 class ChangePasswordPage extends StatefulWidget {
@@ -60,25 +61,48 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
 
     try {
-      final user = await AuthService.getCurrentUser();
+      final user = await GetIt.I<AuthRepository>().getCurrentUser();
       if (user == null) throw Exception("User not logged in.");
 
-      await AuthService.reauthenticate(oldPassword);
-      await AuthService.updateUserAuth(userId: user.uid, password: newPassword);
+      final reauthResult = await GetIt.I<AuthRepository>().reauthenticate(
+        oldPassword,
+      );
 
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainPage()),
-          (route) => false,
-        );
-        await CustomAlertDialog.show(
-          context: context,
-          title: "Success",
-          message: "Your password has been updated successfully.",
-        );
-        Navigator.pop(context);
-      }
+      await reauthResult.fold(
+        (failure) async {
+          throw FirebaseAuthException(
+            code: 'wrong-password',
+            message: failure.message,
+          );
+        },
+        (_) async {
+          final updateResult = await GetIt.I<AuthRepository>().updateUserAuth(
+            userId: user.uid,
+            password: newPassword,
+          );
+
+          await updateResult.fold(
+            (failure) async {
+              throw Exception(failure.message);
+            },
+            (_) async {
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MainPage()),
+                  (route) => false,
+                );
+                await CustomAlertDialog.show(
+                  context: context,
+                  title: "Success",
+                  message: "Your password has been updated successfully.",
+                );
+                Navigator.pop(context);
+              }
+            },
+          );
+        },
+      );
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
@@ -194,16 +218,21 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                       style: TextStyle(color: context.theme.textColor),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Please enter a new password';
-                        if (value == _oldPasswordController.text)
+                        }
+                        if (value == _oldPasswordController.text) {
                           return 'New password must be different from the old password';
-                        if (value.length < 8 || value.length > 50)
+                        }
+                        if (value.length < 8 || value.length > 50) {
                           return 'Password must be between 8-50 characters';
-                        if (!RegExp(r'[a-z]').hasMatch(value))
+                        }
+                        if (!RegExp(r'[a-z]').hasMatch(value)) {
                           return 'Password must contain at least 1 lowercase letter';
-                        if (!RegExp(r'\d').hasMatch(value))
+                        }
+                        if (!RegExp(r'\d').hasMatch(value)) {
                           return 'Password must contain at least 1 number';
+                        }
                         if (!RegExp(
                           r'[!@#$%^&*(),.?":{}|<>]',
                         ).hasMatch(value)) {
@@ -227,10 +256,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       ),
                       style: TextStyle(color: context.theme.textColor),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Please confirm your password';
-                        if (value != _newPasswordController.text)
+                        }
+                        if (value != _newPasswordController.text) {
                           return 'Passwords do not match';
+                        }
                         return null;
                       },
                     ),
@@ -300,3 +331,4 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
   }
 }
+

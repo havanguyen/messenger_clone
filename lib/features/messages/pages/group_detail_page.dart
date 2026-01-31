@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/widgets/elements/custom_round_avatar.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
-import 'package:messenger_clone/features/chat/model/user.dart';
-import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
+import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc.dart';
 import 'package:messenger_clone/features/messages/pages/add_member_group_page.dart';
 
 class GroupDetailPage extends StatefulWidget {
@@ -298,3 +297,5 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 }
+
+

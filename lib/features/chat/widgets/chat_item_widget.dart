@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/common_function.dart';
-import 'package:messenger_clone/common/services/date_time_format.dart';
-import 'package:messenger_clone/common/services/hive_service.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/utils/common_utils.dart';
+import 'package:messenger_clone/core/utils/date_time_extensions.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 
-import '../../../common/widgets/custom_text_style.dart';
-import '../../../common/widgets/elements/custom_round_avatar.dart';
+import '../../../core/widgets/custom_text_style.dart';
+import '../../../core/widgets/elements/custom_round_avatar.dart';
 import '../model/chat_item.dart';
 
 class ChatItemWidget extends StatelessWidget {
@@ -35,7 +35,7 @@ class ChatItemWidget extends StatelessWidget {
     late final String senderName;
 
     if (lastMessage.idFrom == currentUserId) {
-      senderName = "Bạn";
+      senderName = "Báº¡n";
     } else {
       senderName =
           users
@@ -49,18 +49,19 @@ class ChatItemWidget extends StatelessWidget {
       case "text":
         return "$senderName: ${lastMessage.content}";
       case "image":
-        return "$senderName: Đã gửi một ảnh";
+        return "$senderName: ÄÃ£ gá»­i má»™t áº£nh";
       case "video":
-        return "$senderName: Đã gửi một video";
+        return "$senderName: ÄÃ£ gá»­i má»™t video";
       default:
-        return "$senderName: Đã gửi một tin nhắn";
+        return "$senderName: ÄÃ£ gá»­i má»™t tin nháº¯n";
     }
   }
 
   Widget _buildSeenIndicator(BuildContext context, String currentUserId) {
     final lastMessage = item.groupMessage.lastMessage;
-    if (lastMessage == null || lastMessage.idFrom != currentUserId)
+    if (lastMessage == null || lastMessage.idFrom != currentUserId) {
       return const SizedBox.shrink();
+    }
 
     final List<User> seenUsers =
         lastMessage.usersSeen
@@ -190,7 +191,7 @@ class ChatItemWidget extends StatelessWidget {
                                   right: 4,
                                 ),
                                 child: Text(
-                                  "·",
+                                  "Â·",
                                   style: TextStyle(
                                     color:
                                         item.hasUnread
@@ -242,3 +243,4 @@ class ChatItemWidget extends StatelessWidget {
     );
   }
 }
+

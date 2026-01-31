@@ -1,12 +1,14 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/services/friend_service.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
-import '../../../common/services/hive_service.dart';
+// import 'package:messenger_clone/core/services/friend_service.dart'; // Removed
+import 'package:messenger_clone/features/friend/domain/repositories/friend_repository.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+
+import 'package:messenger_clone/core/local/hive_storage.dart';
 
 class FindFriendsPage extends StatefulWidget {
   const FindFriendsPage({super.key});
@@ -15,7 +17,8 @@ class FindFriendsPage extends StatefulWidget {
   State<FindFriendsPage> createState() => _FindFriendsPageState();
 }
 
-class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProviderStateMixin {
+class _FindFriendsPageState extends State<FindFriendsPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = false;
@@ -60,19 +63,36 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
     });
 
     try {
-      final results = await FriendService.searchUsersByName(query);
+      final resultsResult = await GetIt.I<FriendRepository>().searchUsersByName(
+        query,
+      );
+      final results = resultsResult.fold(
+        (l) => throw Exception(l.message),
+        (r) => r,
+      );
       final currentUser = await HiveService.instance.getCurrentUserId();
 
       _currentUserId = currentUser;
-      final updatedResults = await Future.wait(results.map((user) async {
-        final status = await FriendService.getFriendshipStatus(_currentUserId, user['userId']);
-        return {
-          ...user,
-          'friendshipStatus': status['status'],
-          'requestId': status['requestId'],
-          'direction': status['direction'],
-        };
-      }).toList());
+      final updatedResults = await Future.wait(
+        results.map((user) async {
+          final statusResult = await GetIt.I<FriendRepository>()
+              .getFriendshipStatus(_currentUserId, user['userId']);
+          final status = statusResult.fold(
+            (l) => {
+              'status': 'none',
+              'requestId': '',
+              'direction': '',
+            }, // Default handling
+            (r) => r,
+          );
+          return {
+            ...user,
+            'friendshipStatus': status['status'],
+            'requestId': status['requestId'],
+            'direction': status['direction'],
+          };
+        }).toList(),
+      );
 
       setState(() {
         _searchResults = updatedResults;
@@ -94,19 +114,25 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
     });
   }
 
-  void _updateFriendshipStatus(String userId, String newStatus, String newRequestId, String newDirection) {
+  void _updateFriendshipStatus(
+    String userId,
+    String newStatus,
+    String newRequestId,
+    String newDirection,
+  ) {
     setState(() {
-      _searchResults = _searchResults.map((user) {
-        if (user['userId'] == userId) {
-          return {
-            ...user,
-            'friendshipStatus': newStatus,
-            'requestId': newRequestId,
-            'direction': newDirection,
-          };
-        }
-        return user;
-      }).toList();
+      _searchResults =
+          _searchResults.map((user) {
+            if (user['userId'] == userId) {
+              return {
+                ...user,
+                'friendshipStatus': newStatus,
+                'requestId': newRequestId,
+                'direction': newDirection,
+              };
+            }
+            return user;
+          }).toList();
     });
     _animationController.forward(from: 0.0);
   }
@@ -123,7 +149,11 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
           onPressed: () => Navigator.pop(context),
           color: context.theme.textColor,
         ),
-        title: const TitleText('Find Friends', fontSize: 25, fontWeight: FontWeight.bold),
+        title: const TitleText(
+          'Find Friends',
+          fontSize: 25,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -146,7 +176,10 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
       decoration: InputDecoration(
         hintText: 'Search by name...',
         hintStyle: TextStyle(color: context.theme.textColor.withOpacity(0.5)),
-        prefixIcon: Icon(Icons.search, color: context.theme.textColor.withOpacity(0.7)),
+        prefixIcon: Icon(
+          Icons.search,
+          color: context.theme.textColor.withOpacity(0.7),
+        ),
         filled: true,
         fillColor: context.theme.grey,
         border: OutlineInputBorder(
@@ -198,7 +231,11 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
     );
   }
 
-  Widget _buildUserCard(BuildContext context, Map<String, dynamic> user, String currentUserId) {
+  Widget _buildUserCard(
+    BuildContext context,
+    Map<String, dynamic> user,
+    String currentUserId,
+  ) {
     final isCurrentUser = currentUserId == user['userId'];
     final friendshipStatus = user['friendshipStatus'] as String;
     final requestId = user['requestId'] as String;
@@ -212,9 +249,10 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
         child: ListTile(
           leading: CircleAvatar(
             radius: 25,
-            backgroundImage: user['photoUrl'] != null && user['photoUrl'].startsWith('http')
-                ? NetworkImage(user['photoUrl'])
-                : const AssetImage('assets/images/avatar.png'),
+            backgroundImage:
+                user['photoUrl'] != null && user['photoUrl'].startsWith('http')
+                    ? NetworkImage(user['photoUrl'])
+                    : const AssetImage('assets/images/avatar.png'),
           ),
           title: TitleText(
             user['name'] ?? 'Unknown',
@@ -223,7 +261,9 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
             color: context.theme.textColor,
           ),
           subtitle: TitleText(
-            user['aboutMe']?.isNotEmpty == true ? user['aboutMe'] : 'No description',
+            user['aboutMe']?.isNotEmpty == true
+                ? user['aboutMe']
+                : 'No description',
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: context.theme.textColor.withOpacity(0.7),
@@ -240,9 +280,10 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
         child: ListTile(
           leading: CircleAvatar(
             radius: 25,
-            backgroundImage: user['photoUrl'] != null && user['photoUrl'].startsWith('http')
-                ? NetworkImage(user['photoUrl'])
-                : const AssetImage('assets/images/avatar.png'),
+            backgroundImage:
+                user['photoUrl'] != null && user['photoUrl'].startsWith('http')
+                    ? NetworkImage(user['photoUrl'])
+                    : const AssetImage('assets/images/avatar.png'),
           ),
           title: TitleText(
             user['name'] ?? 'Unknown',
@@ -251,7 +292,9 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
             color: context.theme.textColor,
           ),
           subtitle: TitleText(
-            user['aboutMe']?.isNotEmpty == true ? user['aboutMe'] : 'No description',
+            user['aboutMe']?.isNotEmpty == true
+                ? user['aboutMe']
+                : 'No description',
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: context.theme.textColor.withOpacity(0.7),
@@ -262,17 +305,36 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.theme.blue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
                 onPressed: () async {
                   try {
-                    await FriendService.acceptFriendRequest(requestId, currentUserId);
+                    await GetIt.I<FriendRepository>()
+                        .acceptFriendRequest(requestId, currentUserId)
+                        .then(
+                          (result) => result.fold(
+                            (l) => throw Exception(l.message),
+                            (_) => null,
+                          ),
+                        );
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Friend request accepted')),
+                        const SnackBar(
+                          content: Text('Friend request accepted'),
+                        ),
                       );
-                      _updateFriendshipStatus(user['userId'], 'accepted', requestId, direction);
+                      _updateFriendshipStatus(
+                        user['userId'],
+                        'accepted',
+                        requestId,
+                        direction,
+                      );
                     }
                   } catch (e) {
                     if (mounted) {
@@ -288,22 +350,38 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: context.theme.textColor),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
                 onPressed: () async {
                   try {
-                    await FriendService.declineFriendRequest(requestId);
+                    await GetIt.I<FriendRepository>()
+                        .declineFriendRequest(requestId)
+                        .then(
+                          (result) => result.fold(
+                            (l) => throw Exception(l.message),
+                            (_) => null,
+                          ),
+                        );
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Friend request declined')),
+                        const SnackBar(
+                          content: Text('Friend request declined'),
+                        ),
                       );
                       _updateFriendshipStatus(user['userId'], 'none', '', '');
                     }
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to decline request: $e')),
+                        SnackBar(
+                          content: Text('Failed to decline request: $e'),
+                        ),
                       );
                     }
                   }
@@ -323,9 +401,10 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
       child: ListTile(
         leading: CircleAvatar(
           radius: 25,
-          backgroundImage: user['photoUrl'] != null && user['photoUrl'].startsWith('http')
-              ? NetworkImage(user['photoUrl'])
-              : const AssetImage('assets/images/avatar.png'),
+          backgroundImage:
+              user['photoUrl'] != null && user['photoUrl'].startsWith('http')
+                  ? NetworkImage(user['photoUrl'])
+                  : const AssetImage('assets/images/avatar.png'),
         ),
         title: TitleText(
           user['name'] ?? 'Unknown',
@@ -334,102 +413,151 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
           color: context.theme.textColor,
         ),
         subtitle: TitleText(
-          user['aboutMe']?.isNotEmpty == true ? user['aboutMe'] : 'No description',
+          user['aboutMe']?.isNotEmpty == true
+              ? user['aboutMe']
+              : 'No description',
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: context.theme.textColor.withOpacity(0.7),
         ),
         trailing: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: friendshipStatus == 'none' ? context.theme.blue : context.theme.grey,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor:
+                friendshipStatus == 'none'
+                    ? context.theme.blue
+                    : context.theme.grey,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           ),
-          onPressed: friendshipStatus == 'none'
-              ? () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Add Friend'),
-                content: const Text('Do you want to send a friend request to this user?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Send'),
-                  ),
-                ],
-              ),
-            );
+          onPressed:
+              friendshipStatus == 'none'
+                  ? () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Add Friend'),
+                            content: const Text(
+                              'Do you want to send a friend request to this user?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Send'),
+                              ),
+                            ],
+                          ),
+                    );
 
-            if (confirmed == true) {
-              try {
-                await FriendService.sendFriendRequest(currentUserId, user['userId']);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Friend request sent!')),
-                  );
-                  _updateFriendshipStatus(user['userId'], 'pending', '', 'sent');
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        e.toString().contains('already exists')
-                            ? 'A friend request or friendship already exists with this user.'
-                            : e.toString().contains('Failed to send friend request')
-                            ? e.toString().replaceFirst('Exception: Failed to send friend request: ', '')
-                            : 'Failed to send request: $e',
-                      ),
-                    ),
-                  );
-                }
-              }
-            }
-          }
-              : friendshipStatus == 'pending' && direction == 'sent'
-              ? () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Cancel Friend Request'),
-                content: const Text('Do you want to cancel the friend request?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('No'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Yes'),
-                  ),
-                ],
-              ),
-            );
+                    if (confirmed == true) {
+                      try {
+                        await GetIt.I<FriendRepository>()
+                            .sendFriendRequest(currentUserId, user['userId'])
+                            .then(
+                              (result) => result.fold(
+                                (l) => throw Exception(l.message),
+                                (_) => null,
+                              ),
+                            );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Friend request sent!'),
+                            ),
+                          );
+                          _updateFriendshipStatus(
+                            user['userId'],
+                            'pending',
+                            '',
+                            'sent',
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e.toString().contains('already exists')
+                                    ? 'A friend request or friendship already exists with this user.'
+                                    : e.toString().contains(
+                                      'Failed to send friend request',
+                                    )
+                                    ? e.toString().replaceFirst(
+                                      'Exception: Failed to send friend request: ',
+                                      '',
+                                    )
+                                    : 'Failed to send request: $e',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  }
+                  : friendshipStatus == 'pending' && direction == 'sent'
+                  ? () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Cancel Friend Request'),
+                            content: const Text(
+                              'Do you want to cancel the friend request?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('No'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Yes'),
+                              ),
+                            ],
+                          ),
+                    );
 
-            if (confirmed == true) {
-              try {
-                await FriendService.cancelFriendRequest(requestId);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Friend request canceled')),
-                  );
-                  _updateFriendshipStatus(user['userId'], 'none', '', '');
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to cancel request: $e')),
-                  );
-                }
-              }
-            }
-          }
-              : null,
+                    if (confirmed == true) {
+                      try {
+                        await GetIt.I<FriendRepository>()
+                            .cancelFriendRequest(requestId)
+                            .then(
+                              (result) => result.fold(
+                                (l) => throw Exception(l.message),
+                                (_) => null,
+                              ),
+                            );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Friend request canceled'),
+                            ),
+                          );
+                          _updateFriendshipStatus(
+                            user['userId'],
+                            'none',
+                            '',
+                            '',
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to cancel request: $e'),
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  }
+                  : null,
           child: Text(
             friendshipStatus == 'pending' && direction == 'sent'
                 ? 'Request Sent'
@@ -443,3 +571,4 @@ class _FindFriendsPageState extends State<FindFriendsPage> with SingleTickerProv
     );
   }
 }
+

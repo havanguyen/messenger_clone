@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../common/widgets/custom_text_style.dart';
-import '../../../common/widgets/elements/custom_round_avatar.dart';
-import '../../../common/extensions/custom_theme_extension.dart';
+import '../../../core/widgets/custom_text_style.dart';
+import '../../../core/widgets/elements/custom_round_avatar.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 import '../../chat/model/user.dart';
 
 class CustomMessagesAppBar extends StatelessWidget
@@ -18,7 +18,6 @@ class CustomMessagesAppBar extends StatelessWidget
   final void Function()? onTapAvatar;
 
   const CustomMessagesAppBar._({
-    super.key,
     required this.isMe,
     this.backgroundColor,
     this.user,
@@ -75,13 +74,13 @@ class CustomMessagesAppBar extends StatelessWidget
     );
 
     if (duration.inDays > 0) {
-      return "Hoạt động ${duration.inDays} ngày trước";
+      return "Hoáº¡t Ä‘á»™ng ${duration.inDays} ngÃ y trÆ°á»›c";
     } else if (duration.inHours > 0) {
-      return "Hoạt động ${duration.inHours} giờ trước";
+      return "Hoáº¡t Ä‘á»™ng ${duration.inHours} giá» trÆ°á»›c";
     } else if (duration.inMinutes > 0) {
-      return "Hoạt động ${duration.inMinutes} phút trước";
+      return "Hoáº¡t Ä‘á»™ng ${duration.inMinutes} phÃºt trÆ°á»›c";
     } else {
-      return "Đang hoạt động";
+      return "Äang hoáº¡t Ä‘á»™ng";
     }
   }
 
@@ -118,7 +117,7 @@ class CustomMessagesAppBar extends StatelessWidget
                     overflow: TextOverflow.ellipsis,
                   ),
                   ContentText(
-                    isGroup ? "Đang hoạt động" : _getOfflineDurationText(),
+                    isGroup ? "Äang hoáº¡t Ä‘á»™ng" : _getOfflineDurationText(),
                     overflow: TextOverflow.ellipsis,
                     color: context.theme.textGrey,
                   ),
@@ -158,3 +157,4 @@ class CustomMessagesAppBar extends StatelessWidget
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
+

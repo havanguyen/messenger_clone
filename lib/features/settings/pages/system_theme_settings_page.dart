@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 import 'package:provider/provider.dart';
 
-import '../../../common/themes/theme_provider.dart';
-import '../../../common/widgets/custom_text_style.dart';
+import 'package:messenger_clone/theme/theme_provider.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 
 class SystemThemeSettingsPage extends StatefulWidget {
   const SystemThemeSettingsPage({super.key});
 
   @override
-  State<SystemThemeSettingsPage> createState() => _SystemThemeSettingsPageState();
+  State<SystemThemeSettingsPage> createState() =>
+      _SystemThemeSettingsPageState();
 }
 
 class _SystemThemeSettingsPageState extends State<SystemThemeSettingsPage> {
@@ -44,9 +45,7 @@ class _SystemThemeSettingsPageState extends State<SystemThemeSettingsPage> {
         backgroundColor: context.theme.bg,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: context.theme.bg
-        ),
+        decoration: BoxDecoration(color: context.theme.bg),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -54,7 +53,7 @@ class _SystemThemeSettingsPageState extends State<SystemThemeSettingsPage> {
             children: [
               RadioListTile<ThemeMode>(
                 title: const TitleText(
-                    "Off",
+                  "Off",
                   fontSize: 18,
                   fontWeight: FontWeight.w400,
                 ),

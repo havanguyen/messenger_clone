@@ -1,19 +1,22 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/services/user_service.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+
+import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 import 'package:messenger_clone/features/auth/pages/login_screen.dart';
 import 'package:messenger_clone/features/menu/pages/create_grop_page.dart';
 import 'package:messenger_clone/features/settings/pages/settings_page.dart';
-import 'package:messenger_clone/common/widgets/dialog/custom_alert_dialog.dart';
-import 'package:messenger_clone/common/widgets/dialog/loading_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 import 'package:messenger_clone/features/menu/dialog/dialog_utils.dart';
 import 'package:messenger_clone/features/menu/pages/edit_profile_page.dart';
 import 'package:messenger_clone/features/menu/pages/find_friend_page.dart';
-import '../../../common/services/friend_service.dart';
-import '../../../common/services/hive_service.dart';
+// import '../../../core/services/friend_service.dart'; // Removed
+import 'package:messenger_clone/features/friend/domain/repositories/friend_repository.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
 import 'friends_request_pagee.dart';
 import 'list_friends_page.dart';
 
@@ -44,28 +47,42 @@ class _MenuPageState extends State<MenuPage> {
 
   Future<void> _fetchUserData() async {
     final currentUserId = await HiveService.instance.getCurrentUserId();
-    final result = await UserService.fetchUserDataById(currentUserId);
+    final userResult = await GetIt.I<UserRepository>().fetchUserDataById(
+      currentUserId,
+    );
+
     if (!mounted) return;
-    setState(() {
-      if (result.containsKey('error')) {
-        errorMessage = result['error'] as String?;
-        isLoading = false;
-      } else {
-        userName = result['userName'] as String?;
-        userId = result['userId'] as String?;
-        email = result['email'] as String?;
-        aboutMe = result['aboutMe'] as String?;
-        photoUrl = result['photoUrl'] as String?;
-        isLoading = false;
-      }
-    });
+
+    userResult.fold(
+      (failure) {
+        setState(() {
+          errorMessage = failure.message;
+          isLoading = false;
+        });
+      },
+      (result) {
+        setState(() {
+          if (result.containsKey('error')) {
+            errorMessage = result['error'] as String?;
+          } else {
+            userName = result['userName'] as String?;
+            userId = result['userId'] as String?;
+            email = result['email'] as String?;
+            aboutMe = result['aboutMe'] as String?;
+            photoUrl = result['photoUrl'] as String?;
+          }
+          isLoading = false;
+        });
+      },
+    );
   }
 
   Future<void> _fetchNotificationCounts() async {
     try {
       final userId = await HiveService.instance.getCurrentUserId();
-      final friendRequestsCount =
-          await FriendService.getPendingFriendRequestsCount(userId);
+      final result = await GetIt.I<FriendRepository>()
+          .getPendingFriendRequestsCount(userId);
+      final friendRequestsCount = result.fold((l) => 0, (r) => r);
       if (!mounted) return;
       setState(() {
         _friendRequestsCount = friendRequestsCount;
@@ -125,10 +142,12 @@ class _MenuPageState extends State<MenuPage> {
 
   Future<bool> _verifyPassword(String password) async {
     try {
-      await AuthService.reauthenticate(password);
-      return true;
+      final result = await GetIt.I<AuthRepository>().reauthenticate(password);
+      return result.fold((failure) {
+        print('Password verification failed: ${failure.message}');
+        return false;
+      }, (_) => true);
     } catch (e) {
-      // Basic check for Firebase Auth errors, or generic logging
       print('Password verification failed: $e');
       return false;
     }
@@ -146,14 +165,20 @@ class _MenuPageState extends State<MenuPage> {
     );
 
     try {
-      final user = await AuthService.getCurrentUser();
+      final user = await GetIt.I<AuthRepository>().getCurrentUser();
       if (user == null) throw Exception("User not logged in.");
       if (await _verifyPassword(password)) {
         if (!mounted) return;
         Navigator.pop(context);
         await DialogUtils.executeWithLoading(
           context: context,
-          action: AuthService.deleteAccount,
+          action: () async {
+            final result = await GetIt.I<AuthRepository>().deleteAccount();
+            result.fold(
+              (failure) => throw Exception(failure.message),
+              (_) => null,
+            );
+          },
           loadingMessage: 'Deleting account...',
           errorMessage: 'Failed to delete account.',
           onSuccess: () async {
@@ -362,7 +387,7 @@ class _MenuPageState extends State<MenuPage> {
                   color: context.theme.textColor.withOpacity(0.7),
                 ),
                 TitleText(
-                  aboutMe?.isNotEmpty == true ? aboutMe! : 'Ruby chan (>ω<)',
+                  aboutMe?.isNotEmpty == true ? aboutMe! : 'Ruby chan (>Ï‰<)',
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                   color: context.theme.textColor.withOpacity(0.7),
@@ -466,7 +491,13 @@ class _MenuPageState extends State<MenuPage> {
             )) {
               await DialogUtils.executeWithLoading(
                 context: context,
-                action: AuthService.signOut,
+                action: () async {
+                  final result = await GetIt.I<AuthRepository>().signOut();
+                  result.fold(
+                    (failure) => throw Exception(failure.message),
+                    (_) => null,
+                  );
+                },
                 loadingMessage: 'Logging out...',
                 errorMessage: 'Failed to log out.',
                 onSuccess: () {
@@ -509,3 +540,4 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
 }
+

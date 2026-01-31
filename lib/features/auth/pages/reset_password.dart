@@ -1,9 +1,9 @@
+﻿import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
 
-
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/widgets/dialog/custom_alert_dialog.dart';
-import 'package:messenger_clone/common/widgets/dialog/loading_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 import 'package:messenger_clone/features/auth/pages/login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -17,7 +17,8 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   String? _passwordError;
   String? _confirmPasswordError;
   bool _obscurePassword = true;
@@ -25,16 +26,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   void _validateInputs() {
     setState(() {
-      _passwordError = _passwordController.text.isEmpty
-          ? 'Please enter a password'
-          : _passwordController.text.length < 8
-          ? 'Password must be at least 8 characters long'
-          : null;
-      _confirmPasswordError = _confirmPasswordController.text.isEmpty
-          ? 'Please confirm your password'
-          : _confirmPasswordController.text != _passwordController.text
-          ? 'Passwords do not match'
-          : null;
+      _passwordError =
+          _passwordController.text.isEmpty
+              ? 'Please enter a password'
+              : _passwordController.text.length < 8
+              ? 'Password must be at least 8 characters long'
+              : null;
+      _confirmPasswordError =
+          _confirmPasswordController.text.isEmpty
+              ? 'Please confirm your password'
+              : _confirmPasswordController.text != _passwordController.text
+              ? 'Passwords do not match'
+              : null;
     });
   }
 
@@ -44,38 +47,79 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const LoadingDialog(message: "Updating password..."),
+      builder:
+          (context) => const LoadingDialog(message: "Updating password..."),
     );
 
     try {
-      final userId = await AuthService.getUserIdFromEmail(widget.email);
-      if (userId == null) {
-        throw Exception('Unable to verify account. Please try again.');
-      }
-      await AuthService.resetPassword(
-        userId: userId,
-        newPassword: _passwordController.text,
+      final userIdResult = await GetIt.I<AuthRepository>().getUserIdFromEmail(
+        widget.email,
       );
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
-      );
-      await CustomAlertDialog.show(
-        context: context,
-        title: "Success",
-        message: "Your password has been updated. Please log in again.",
+
+      await userIdResult.fold(
+        (failure) async {
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
+          await CustomAlertDialog.show(
+            context: context,
+            title: "Error",
+            message: "Unable to verify account: ${failure.message}",
+          );
+        },
+        (userId) async {
+          if (userId == null) {
+            if (!context.mounted) return;
+            Navigator.of(context).pop();
+            await CustomAlertDialog.show(
+              context: context,
+              title: "Error",
+              message: "Unable to verify account. Please try again.",
+            );
+            return;
+          }
+          final resetResult = await GetIt.I<AuthRepository>().resetPassword(
+            userId: userId,
+            newPassword: _passwordController.text,
+          );
+
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
+
+          resetResult.fold(
+            (failure) async {
+              await CustomAlertDialog.show(
+                context: context,
+                title: "Error",
+                message: "Failed to update password: ${failure.message}",
+              );
+            },
+            (_) async {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
+              );
+              await CustomAlertDialog.show(
+                context: context,
+                title: "Success",
+                message: "Your password has been updated. Please log in again.",
+              );
+            },
+          );
+        },
       );
     } catch (e) {
       if (!context.mounted) return;
+      // Close dialog if still open (though we handled it above in most cases, but safety)
+      // Navigator.of(context).pop(); // Might pop wrong thing if handled above.
+      // Better to rely on folds popping. But 'catch' catches unexpected errors.
+      if (Navigator.canPop(context)) Navigator.of(context).pop();
+
       await CustomAlertDialog.show(
         context: context,
         title: "Error",
-        message: "Failed to update password: $e",
+        message: "An unexpected error occurred: $e",
       );
-    } finally {
-      if (context.mounted) Navigator.of(context).pop();
     }
   }
 
@@ -118,7 +162,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 labelText: 'New Password',
                 isDense: true,
                 labelStyle: TextStyle(
-                  color: _passwordError != null ? Colors.red : const Color(0xFF9eabb3),
+                  color:
+                      _passwordError != null
+                          ? Colors.red
+                          : const Color(0xFF9eabb3),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -161,7 +208,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 labelText: 'Confirm Password',
                 isDense: true,
                 labelStyle: TextStyle(
-                  color: _confirmPasswordError != null ? Colors.red : const Color(0xFF9eabb3),
+                  color:
+                      _confirmPasswordError != null
+                          ? Colors.red
+                          : const Color(0xFF9eabb3),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -174,7 +224,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 errorText: _confirmPasswordError,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                    _obscureConfirmPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                     color: Colors.grey,
                   ),
                   onPressed: () {
@@ -226,3 +278,4 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 }
+

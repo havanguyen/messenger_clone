@@ -1,10 +1,15 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/features/menu/bloc/create_group_bloc.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/features/menu/presentation/bloc/create_group_bloc.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
-import 'package:messenger_clone/common/routes/routes.dart';
+import 'package:messenger_clone/routes/app_router.dart';
+
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/menu/domain/usecases/create_group_usecase.dart';
+import 'package:messenger_clone/features/chat/domain/usecases/get_friends_usecase.dart';
+import 'package:messenger_clone/features/auth/domain/usecases/get_current_user_usecase.dart';
 
 class CreateGroupPage extends StatelessWidget {
   const CreateGroupPage({super.key});
@@ -12,7 +17,12 @@ class CreateGroupPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => CreateGroupBloc(),
+      create:
+          (_) => CreateGroupBloc(
+            getFriendsUseCase: GetIt.I<GetFriendsUseCase>(),
+            createGroupUseCase: GetIt.I<CreateGroupUseCase>(),
+            getCurrentUserUseCase: GetIt.I<GetCurrentUserUseCase>(),
+          ),
       child: const _CreateGroupView(),
     );
   }
@@ -66,7 +76,7 @@ class _CreateGroupViewState extends State<_CreateGroupView> {
           if (state is CreateGroupLoaded && state.createdGroup != null) {
             Navigator.pushReplacementNamed(
               context,
-              Routes.chat,
+              AppRouter.chat,
               arguments: state.createdGroup,
             );
           }

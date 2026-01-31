@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:messenger_clone/common/widgets/elements/video_player_preview_widget.dart';
-import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
+import 'package:messenger_clone/core/widgets/elements/video_player_preview_widget.dart';
+import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc.dart';
 
 import 'dart:io';
 
-import '../../../common/extensions/custom_theme_extension.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
 class CustomMessagesBottomBar extends StatefulWidget {
   final TextEditingController textController;
@@ -200,7 +200,7 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
                     ),
                     filled: true,
                     fillColor: context.theme.grey,
-                    hintText: "Nhắn tin",
+                    hintText: "Nháº¯n tin",
                     hintStyle: TextStyle(color: context.theme.textColor),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -216,7 +216,7 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
                   widget.onSendMessage?.call();
                   _focusNode.requestFocus();
                 } else {
-                  context.read<MessageBloc>().add(MessageSendEvent("👍"));
+                  context.read<MessageBloc>().add(MessageSendEvent("ðŸ‘"));
                 }
               },
               icon: Icon(
@@ -312,3 +312,5 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
     );
   }
 }
+
+

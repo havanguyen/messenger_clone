@@ -16,7 +16,7 @@ class MetaAiMessageHive extends HiveObject {
 
 class MetaAiMessageHiveAdapter extends TypeAdapter<MetaAiMessageHive> {
   @override
-  final int typeId = 2;
+  final int typeId = 3;
 
   @override
   MetaAiMessageHive read(BinaryReader reader) {

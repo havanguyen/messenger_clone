@@ -1,16 +1,18 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/services/user_service.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
+import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 import 'package:messenger_clone/features/main_page/main_page.dart';
 import 'package:messenger_clone/features/menu/pages/menu_page.dart';
-import '../../../common/services/opt_email_service.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
-import '../../../common/widgets/dialog/loading_dialog.dart';
+
+import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
+import '../../../core/widgets/dialog/loading_dialog.dart';
 import '../../auth/pages/confirmation_code_screen.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -132,100 +134,155 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 (context) => const LoadingDialog(message: "Checking email..."),
           );
           try {
-            final isRegistered = await AuthService.isEmailRegistered(_email!);
+            final result = await GetIt.I<AuthRepository>().isEmailRegistered(
+              _email!,
+            );
+            if (!mounted) return;
             Navigator.of(context).pop();
-            if (isRegistered) {
-              await CustomAlertDialog.show(
-                context: context,
-                title: "Email already exists",
-                message:
-                    "This email is already registered. Please use another email.",
-              );
-            } else {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder:
-                    (context) => const LoadingDialog(message: "Sending OTP..."),
-              );
-              final otp = OTPEmailService.generateOTP();
-              await OTPEmailService.sendOTPEmail(_email!, otp);
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => ConfirmationCodeScreen(
-                        email: _email!,
-                        nextScreen: () => MenuPage(),
-                        action: () async {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder:
-                                (context) => const LoadingDialog(
-                                  message: "Updating profile...",
-                                ),
-                          );
-                          try {
-                            await AuthService.reauthenticate(password);
 
-                            await UserService.updateUserProfile(
-                              userId: widget.userId,
-                              name: _name,
-                              email: _email,
-                              aboutMe: _aboutMe,
-                              photoUrl: _photoUrl,
-                            );
-                            await AuthService.updateUserAuth(
-                              userId: widget.userId,
-                              name: nameChanged ? _name : null,
-                              email: emailChanged ? _email : null,
-                            );
-                            if (_selectedImage != null) {
-                              final newPhotoUrl =
-                                  await UserService.updatePhotoUrl(
-                                    imageFile: _selectedImage!,
-                                    userId: widget.userId,
-                                  );
-                              setState(() {
-                                _photoUrl = newPhotoUrl;
-                                _selectedImage = null;
-                              });
-                            }
-                          } catch (e) {
-                            if (e is FirebaseAuthException &&
-                                (e.code == 'wrong-password' ||
-                                    e.code == 'invalid-credential')) {
-                              Navigator.of(context).pop();
-                              await CustomAlertDialog.show(
+            await result.fold(
+              (failure) async {
+                await CustomAlertDialog.show(
+                  context: context,
+                  title: "System error",
+                  message: "Unable to check email: ${failure.message}",
+                );
+              },
+              (isRegistered) async {
+                if (isRegistered) {
+                  await CustomAlertDialog.show(
+                    context: context,
+                    title: "Email already exists",
+                    message:
+                        "This email is already registered. Please use another email.",
+                  );
+                } else {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder:
+                        (context) =>
+                            const LoadingDialog(message: "Sending OTP..."),
+                  );
+                  final otp = OTPEmailService.generateOTP();
+                  await OTPEmailService.sendOTPEmail(_email!, otp);
+
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => ConfirmationCodeScreen(
+                            email: _email!,
+                            nextScreen: () => MenuPage(),
+                            action: () async {
+                              showDialog(
                                 context: context,
-                                title: "Incorrect Password",
-                                message:
-                                    "The password you entered is incorrect. Please try again.",
+                                barrierDismissible: false,
+                                builder:
+                                    (context) => const LoadingDialog(
+                                      message: "Updating profile...",
+                                    ),
                               );
-                              // Retry the entire save process
-                              await _saveChanges();
-                              return;
-                            }
-                            rethrow;
-                          }
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => MainPage()),
-                            (route) => false,
-                          );
-                        },
-                      ),
-                ),
-                (route) => false,
-              );
-            }
+                              try {
+                                final reauthResult =
+                                    await GetIt.I<AuthRepository>()
+                                        .reauthenticate(password);
+                                await reauthResult.fold(
+                                  (failure) async {
+                                    throw FirebaseAuthException(
+                                      code: 'wrong-password',
+                                      message: failure.message,
+                                    );
+                                  },
+                                  (_) async {
+                                    final updateAuthResult =
+                                        await GetIt.I<AuthRepository>()
+                                            .updateUserAuth(
+                                              userId: widget.userId,
+                                              name: nameChanged ? _name : null,
+                                              email:
+                                                  emailChanged ? _email : null,
+                                            );
+
+                                    await updateAuthResult.fold(
+                                      (failure) async {
+                                        throw Exception(failure.message);
+                                      },
+                                      (_) async {
+                                        if (_selectedImage != null) {
+                                          final photoResult =
+                                              await GetIt.I<UserRepository>()
+                                                  .updatePhotoUrl(
+                                                    imageFile: _selectedImage!,
+                                                    userId: widget.userId,
+                                                  );
+                                          final newPhotoUrl = photoResult.fold(
+                                            (l) => throw Exception(l.message),
+                                            (r) => r,
+                                          );
+                                          setState(() {
+                                            _photoUrl = newPhotoUrl;
+                                            _selectedImage = null;
+                                          });
+                                        }
+                                        final profileResult =
+                                            await GetIt.I<UserRepository>()
+                                                .updateUserProfile(
+                                                  userId: widget.userId,
+                                                  name: _name,
+                                                  email: _email,
+                                                  aboutMe: _aboutMe,
+                                                  photoUrl: _photoUrl,
+                                                );
+                                        profileResult.fold(
+                                          (l) => throw Exception(l.message),
+                                          (_) => null,
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              } catch (e) {
+                                if (mounted) Navigator.of(context).pop();
+                                if (e is FirebaseAuthException &&
+                                    (e.code == 'wrong-password' ||
+                                        e.code == 'invalid-credential')) {
+                                  await CustomAlertDialog.show(
+                                    context: context,
+                                    title: "Incorrect Password",
+                                    message:
+                                        "The password you entered is incorrect. Please try again.",
+                                  );
+                                  // Retry the entire save process
+                                  await _saveChanges();
+                                  return;
+                                }
+                                rethrow;
+                              }
+                              if (mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MainPage(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            },
+                          ),
+                    ),
+                    (route) => false,
+                  );
+                }
+              },
+            );
           } catch (e) {
-            Navigator.of(context).pop();
+            if (mounted) Navigator.of(context).pop();
             await CustomAlertDialog.show(
               context: context,
               title: "System error",
-              message: "Unable to check email. Please try again later.",
+              message: "Unable to check email: $e",
             );
           }
         } else if (nameChanged) {
@@ -242,26 +299,53 @@ class _EditProfilePageState extends State<EditProfilePage> {
           );
           try {
             // Re-authenticate first
-            await AuthService.reauthenticate(password);
-
-            await UserService.updateUserProfile(
-              userId: widget.userId,
-              name: _name,
-              email: _email,
-              aboutMe: _aboutMe,
-              photoUrl: _photoUrl,
+            final reauthResult = await GetIt.I<AuthRepository>().reauthenticate(
+              password,
             );
-            // Update Firebase Auth and Sync
-            await AuthService.updateUserAuth(
-              userId: widget.userId,
-              name: nameChanged ? _name : null,
-              email: emailChanged ? _email : null,
-              // Do not update password here
+
+            await reauthResult.fold(
+              (failure) async {
+                throw FirebaseAuthException(
+                  code: 'wrong-password',
+                  message: failure.message,
+                );
+              },
+              (_) async {
+                final profileResult = await GetIt.I<UserRepository>()
+                    .updateUserProfile(
+                      userId: widget.userId,
+                      name: _name,
+                      email: _email,
+                      aboutMe: _aboutMe,
+                      photoUrl: _photoUrl,
+                    );
+                profileResult.fold(
+                  (l) => throw Exception(l.message),
+                  (_) => null,
+                );
+                // Update Firebase Auth and Sync
+                final updateAuthResult = await GetIt.I<AuthRepository>()
+                    .updateUserAuth(
+                      userId: widget.userId,
+                      name: nameChanged ? _name : null,
+                      email: emailChanged ? _email : null,
+                      // Do not update password here
+                    );
+
+                await updateAuthResult.fold((failure) async {
+                  throw Exception(failure.message);
+                }, (_) async {});
+              },
             );
             if (_selectedImage != null) {
-              final newPhotoUrl = await UserService.updatePhotoUrl(
-                imageFile: _selectedImage!,
-                userId: widget.userId,
+              final photoResult = await GetIt.I<UserRepository>()
+                  .updatePhotoUrl(
+                    imageFile: _selectedImage!,
+                    userId: widget.userId,
+                  );
+              final newPhotoUrl = photoResult.fold(
+                (l) => throw Exception(l.message),
+                (r) => r,
               );
               setState(() {
                 _photoUrl = newPhotoUrl;
@@ -298,17 +382,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 (context) =>
                     const LoadingDialog(message: "Updating profile..."),
           );
-          await UserService.updateUserProfile(
-            userId: widget.userId,
-            name: _name,
-            email: _email,
-            aboutMe: _aboutMe,
-            photoUrl: _photoUrl,
-          );
+          final profileResult = await GetIt.I<UserRepository>()
+              .updateUserProfile(
+                userId: widget.userId,
+                name: _name,
+                email: _email,
+                aboutMe: _aboutMe,
+                photoUrl: _photoUrl,
+              );
+          profileResult.fold((l) => throw Exception(l.message), (_) => null);
           if (_selectedImage != null) {
-            final newPhotoUrl = await UserService.updatePhotoUrl(
+            final photoResult = await GetIt.I<UserRepository>().updatePhotoUrl(
               imageFile: _selectedImage!,
               userId: widget.userId,
+            );
+            final newPhotoUrl = photoResult.fold(
+              (l) => throw Exception(l.message),
+              (r) => r,
             );
             setState(() {
               _photoUrl = newPhotoUrl;

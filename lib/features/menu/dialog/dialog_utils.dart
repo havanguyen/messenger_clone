@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
-import 'package:messenger_clone/common/widgets/dialog/loading_dialog.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 
 class DialogUtils {
   const DialogUtils._();
@@ -11,52 +11,52 @@ class DialogUtils {
     required String title,
     required String message,
     String confirmText = 'OK',
-    String cancelText = 'Hủy',
+    String cancelText = 'Há»§y',
   }) async {
     return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: context.theme.bg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: TitleText(
-            title,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: context.theme.textColor,
-          ),
-          content: TitleText(
-            message,
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: context.theme.textColor,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: TitleText(
-                cancelText,
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: context.theme.bg,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              title: TitleText(
+                title,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: context.theme.textColor,
+              ),
+              content: TitleText(
+                message,
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
-                color: context.theme.textColor.withOpacity(0.7),
+                color: context.theme.textColor,
               ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: TitleText(
-                confirmText,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: context.theme.blue,
-              ),
-            ),
-          ],
-        );
-      },
-    ) ??
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: TitleText(
+                    cancelText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: context.theme.textColor.withOpacity(0.7),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: TitleText(
+                    confirmText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: context.theme.blue,
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
         false;
   }
 
@@ -80,16 +80,17 @@ class DialogUtils {
       Navigator.of(context).pop();
       String detailedError = errorMessage;
       if (e.toString().contains('network')) {
-        detailedError = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối của bạn.';
+        detailedError = 'Lá»—i káº¿t ná»‘i máº¡ng. Vui lÃ²ng kiá»ƒm tra káº¿t ná»‘i cá»§a báº¡n.';
       } else if (e.toString().contains('unauthorized')) {
-        detailedError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        detailedError = 'PhiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.';
       }
       await showConfirmationDialog(
         context: context,
-        title: 'Lỗi',
+        title: 'Lá»—i',
         message: detailedError,
-        confirmText: 'Đóng',
+        confirmText: 'ÄÃ³ng',
       );
     }
   }
 }
+

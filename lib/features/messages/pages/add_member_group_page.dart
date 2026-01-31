@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/messages/bloc/add_member_group_bloc.dart';
 import 'package:messenger_clone/features/messages/bloc/add_member_group_event.dart';
 import 'package:messenger_clone/features/messages/bloc/add_member_group_state.dart';
-import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
+import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc.dart';
 
 class AddMemberGroupPage extends StatelessWidget {
   final GroupMessage groupMessage;
@@ -247,3 +247,5 @@ class _AddMemberGroupViewState extends State<_AddMemberGroupView> {
     );
   }
 }
+
+

@@ -1,13 +1,16 @@
-import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/story_service.dart';
-import 'package:messenger_clone/common/services/user_service.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+
+import 'package:messenger_clone/core/widgets/elements/custom_button.dart';
 import 'package:messenger_clone/features/tin/pages/detail_tinPage.dart';
 import 'package:messenger_clone/features/tin/pages/gallery_uploadTin.dart';
-import '../../../common/services/hive_service.dart';
-import '../../../common/widgets/dialog/custom_alert_dialog.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
+import '../../../core/widgets/dialog/custom_alert_dialog.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/story/domain/repositories/story_repository.dart';
+import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
 import '../widgets/story_item.dart';
 
 class TinPage extends StatefulWidget {
@@ -32,17 +35,19 @@ class _TinPageState extends State<TinPage> {
   Future<void> _fetchCurrentUserData() async {
     try {
       final userId = await HiveService.instance.getCurrentUserId();
-      final userData = await UserService.fetchUserDataById(userId);
+      final result = await GetIt.I<UserRepository>().fetchUserDataById(userId);
+      final userData = result.fold((l) => throw Exception(l.message), (r) => r);
       setState(() {
-        _currentUserAvatarUrl = userData['photoUrl'] as String? ??
+        _currentUserAvatarUrl =
+            userData['photoUrl'] as String? ??
             'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023';
       });
     } catch (e) {
       if (mounted) {
         CustomAlertDialog.show(
           context: context,
-          title: 'Lỗi',
-          message: 'Không thể lấy thông tin người dùng: $e',
+          title: 'Lá»—i',
+          message: 'KhÃ´ng thá»ƒ láº¥y thÃ´ng tin ngÆ°á»i dÃ¹ng: $e',
         );
       }
     }
@@ -51,24 +56,42 @@ class _TinPageState extends State<TinPage> {
   Future<void> _fetchStoriesFromAppwrite() async {
     try {
       final userId = await HiveService.instance.getCurrentUserId();
-      final fetchedStories = await StoryService.fetchFriendsStories(userId);
+      final result = await GetIt.I<StoryRepository>().fetchFriendsStories(
+        userId,
+      );
+      final fetchedStories = result.fold(
+        (l) => throw Exception(l.message),
+        (r) => r,
+      );
 
-      final storyItems = await Future.wait(fetchedStories.map((data) async {
-        final userData = await UserService.fetchUserDataById(data['userId'] as String);
-        int totalStories = data['totalStories'] as int;
-        if (data['mediaType'] == 'video') {
-          totalStories = 10;
-        }
-        return StoryItem(
-          userId: data['userId'] as String,
-          title: userData['userName'] as String? ?? 'Unknown',
-          imageUrl: data['mediaUrl'] as String,
-          avatarUrl: userData['photoUrl'] as String? ?? '',
-          isVideo: data['mediaType'] == 'video',
-          postedAt: DateTime.parse(data['createdAt'] as String),
-          totalStories: totalStories,
-        );
-      }).toList());
+      final storyItems = await Future.wait(
+        fetchedStories.map((data) async {
+          final userResult = await GetIt.I<UserRepository>().fetchUserDataById(
+            data['userId'] as String,
+          );
+          final userData = userResult.fold(
+            (l) => <String, dynamic>{
+              'userName': 'Unknown',
+              'photoUrl': '',
+            }, // Fallback or throw?
+            (r) => r,
+          );
+
+          int totalStories = data['totalStories'] as int;
+          if (data['mediaType'] == 'video') {
+            totalStories = 10;
+          }
+          return StoryItem(
+            userId: data['userId'] as String,
+            title: userData['userName'] as String? ?? 'Unknown',
+            imageUrl: data['mediaUrl'] as String,
+            avatarUrl: userData['photoUrl'] as String? ?? '',
+            isVideo: data['mediaType'] == 'video',
+            postedAt: DateTime.parse(data['createdAt'] as String),
+            totalStories: totalStories,
+          );
+        }).toList(),
+      );
 
       if (mounted) {
         setState(() {
@@ -81,8 +104,8 @@ class _TinPageState extends State<TinPage> {
       if (mounted) {
         CustomAlertDialog.show(
           context: context,
-          title: 'Lỗi',
-          message: 'Lỗi khi lấy DANH SÁCH TIN: $e',
+          title: 'Lá»—i',
+          message: 'Lá»—i khi láº¥y DANH SÃCH TIN: $e',
         );
       }
     }
@@ -118,8 +141,9 @@ class _TinPageState extends State<TinPage> {
     final displayStories = [
       StoryItem(
         userId: 'add_to_tin',
-        title: 'Thêm vào tin',
-        imageUrl: _currentUserAvatarUrl ??
+        title: 'ThÃªm vÃ o tin',
+        imageUrl:
+            _currentUserAvatarUrl ??
             'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023',
         avatarUrl: '',
         notificationCount: 0,
@@ -157,28 +181,38 @@ class _TinPageState extends State<TinPage> {
                     if (isFirst) {
                       final newStory = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const GallerySelectionPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const GallerySelectionPage(),
+                        ),
                       );
-                      if (newStory != null && newStory is StoryItem && mounted) {
+                      if (newStory != null &&
+                          newStory is StoryItem &&
+                          mounted) {
                         setState(() {
                           stories.add(newStory);
-                          stories.sort((a, b) => b.postedAt.compareTo(a.postedAt));
+                          stories.sort(
+                            (a, b) => b.postedAt.compareTo(a.postedAt),
+                          );
                         });
                         CustomAlertDialog.show(
                           context: context,
-                          title: 'Thành công',
-                          message: 'Đã thêm tin mới!',
+                          title: 'ThÃ nh cÃ´ng',
+                          message: 'ÄÃ£ thÃªm tin má»›i!',
                         );
                       }
                     } else {
-                      final userStories = stories.where((s) => s.userId == story.userId).toList();
+                      final userStories =
+                          stories
+                              .where((s) => s.userId == story.userId)
+                              .toList();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => StoryDetailPage(
-                            stories: userStories,
-                            initialIndex: 0,
-                          ),
+                          builder:
+                              (context) => StoryDetailPage(
+                                stories: userStories,
+                                initialIndex: 0,
+                              ),
                         ),
                       );
                     }
@@ -189,11 +223,7 @@ class _TinPageState extends State<TinPage> {
             ),
           ),
           if (_isRefreshing)
-            Center(
-              child: CircularProgressIndicator(
-                color: context.theme.grey,
-              ),
-            ),
+            Center(child: CircularProgressIndicator(color: context.theme.grey)),
         ],
       ),
     );
@@ -218,15 +248,18 @@ class _StoryCardState extends State<StoryCard> {
       child: Stack(
         children: [
           CachedNetworkImage(
-            imageUrl: widget.isFirst
-                ? widget.story.imageUrl
-                : (widget.story.isVideo)
-                ? 'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023'
-                : widget.story.imageUrl,
+            imageUrl:
+                widget.isFirst
+                    ? widget.story.imageUrl
+                    : (widget.story.isVideo)
+                    ? 'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023'
+                    : widget.story.imageUrl,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            errorWidget: (context, error, stackTrace) => const Icon(Icons.error, color: Colors.red),
+            errorWidget:
+                (context, error, stackTrace) =>
+                    const Icon(Icons.error, color: Colors.red),
           ),
           if (!widget.isFirst)
             Positioned(
@@ -236,11 +269,16 @@ class _StoryCardState extends State<StoryCard> {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.story.hasBorder ? context.theme.blue : Colors.transparent,
+                  color:
+                      widget.story.hasBorder
+                          ? context.theme.blue
+                          : Colors.transparent,
                 ),
                 child: CircleAvatar(
                   radius: 18,
-                  backgroundImage: CachedNetworkImageProvider(widget.story.avatarUrl),
+                  backgroundImage: CachedNetworkImageProvider(
+                    widget.story.avatarUrl,
+                  ),
                 ),
               ),
             ),
@@ -254,11 +292,7 @@ class _StoryCardState extends State<StoryCard> {
                   shape: BoxShape.circle,
                   color: context.theme.white.withOpacity(0.9),
                 ),
-                child: Icon(
-                  Icons.add,
-                  size: 36,
-                  color: context.theme.blue,
-                ),
+                child: Icon(Icons.add, size: 36, color: context.theme.blue),
               ),
             ),
           if (widget.story.notificationCount > 0)

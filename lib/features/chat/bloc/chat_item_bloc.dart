@@ -3,14 +3,12 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/services/hive_service.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
 import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 import 'package:messenger_clone/features/chat/model/chat_item.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
-// import 'package:messenger_clone/common/services/app_write_config.dart'; // Removed
-// import 'package:messenger_clone/common/services/auth_service.dart'; // Removed direct usage
 
 part 'chat_item_event.dart';
 part 'chat_item_state.dart';

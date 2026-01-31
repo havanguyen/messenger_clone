@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 
-import '../../../common/services/auth_service.dart';
-import '../../../common/services/device_service.dart';
-import '../../../common/services/hive_service.dart';
+import 'package:messenger_clone/features/settings/domain/repositories/device_repository.dart';
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/core/local/hive_storage.dart';
 
 class DeviceManagementPage extends StatefulWidget {
   const DeviceManagementPage({super.key});
@@ -13,7 +13,8 @@ class DeviceManagementPage extends StatefulWidget {
   State<DeviceManagementPage> createState() => _DeviceManagementPageState();
 }
 
-class _DeviceManagementPageState extends State<DeviceManagementPage> with SingleTickerProviderStateMixin {
+class _DeviceManagementPageState extends State<DeviceManagementPage>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _devicesList = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -50,7 +51,14 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> with Single
       final currentUserId = await HiveService.instance.getCurrentUserId();
       _currentUserId = currentUserId;
 
-      final devices = await DeviceService.getUserDevices(_currentUserId);
+      final devicesResult = await GetIt.I<DeviceRepository>().getUserDevices(
+        _currentUserId,
+      );
+      final devices = devicesResult.fold(
+        (l) => throw Exception(l.message),
+        (r) => r,
+      );
+
       setState(() {
         _devicesList = devices;
         _isLoading = false;
@@ -66,7 +74,10 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> with Single
 
   void _removeDeviceFromList(String documentId) {
     setState(() {
-      _devicesList = _devicesList.where((device) => device['documentId'] != documentId).toList();
+      _devicesList =
+          _devicesList
+              .where((device) => device['documentId'] != documentId)
+              .toList();
     });
     _animationController.forward(from: 0.0);
   }
@@ -83,7 +94,11 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> with Single
           onPressed: () => Navigator.pop(context),
           color: context.theme.textColor,
         ),
-        title: const TitleText('Device Management', fontSize: 25, fontWeight: FontWeight.bold),
+        title: const TitleText(
+          'Device Management',
+          fontSize: 25,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -136,7 +151,8 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> with Single
   Widget _buildDeviceCard(BuildContext context, Map<String, dynamic> device) {
     final isCurrentDevice = device['isCurrentDevice'] as bool;
     final lastLogin = DateTime.parse(device['lastLogin'] as String).toLocal();
-    final formattedLastLogin = "${lastLogin.day}/${lastLogin.month}/${lastLogin.year} ${lastLogin.hour}:${lastLogin.minute.toString().padLeft(2, '0')}";
+    final formattedLastLogin =
+        "${lastLogin.day}/${lastLogin.month}/${lastLogin.year} ${lastLogin.hour}:${lastLogin.minute.toString().padLeft(2, '0')}";
 
     return Card(
       color: context.theme.grey,
@@ -178,54 +194,77 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> with Single
               ),
           ],
         ),
-        trailing: isCurrentDevice
-            ? null
-            : OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: context.theme.red),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          ),
-          onPressed: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Remove Device'),
-                content: const Text('Are you sure you want to remove this device?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel'),
+        trailing:
+            isCurrentDevice
+                ? null
+                : OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: context.theme.red),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Remove', style: TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ),
-            );
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Remove Device'),
+                            content: const Text(
+                              'Are you sure you want to remove this device?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Remove',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                    );
 
-            if (confirmed == true) {
-              try {
-                await DeviceService.removeDevice(device['documentId']);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Device removed successfully')),
-                  );
-                  _removeDeviceFromList(device['documentId']);
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to remove device: $e')),
-                  );
-                }
-              }
-            }
-          },
-          child: const Text('Remove', style: TextStyle(fontSize: 12, color: Colors.red)),
-        ),
+                    if (confirmed == true) {
+                      try {
+                        final result = await GetIt.I<DeviceRepository>()
+                            .removeDevice(device['documentId']);
+                        result.fold((l) => throw Exception(l.message), (r) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Device removed successfully'),
+                              ),
+                            );
+                            _removeDeviceFromList(device['documentId']);
+                          }
+                        });
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to remove device: $e'),
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(fontSize: 12, color: Colors.red),
+                  ),
+                ),
       ),
     );
   }
 }
+

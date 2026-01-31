@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:messenger_clone/common/widgets/custom_text_style.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
-import '../../../common/services/friend_service.dart';
-import '../../../common/services/hive_service.dart';
+import 'package:messenger_clone/core/widgets/custom_text_style.dart';
+
+import 'package:get_it/get_it.dart';
+import 'package:messenger_clone/features/friend/domain/repositories/friend_repository.dart';
+// import '../../../../core/services/friend_service.dart'; // Removed
+import 'package:messenger_clone/core/local/hive_storage.dart';
 
 class ListFriendsPage extends StatefulWidget {
   const ListFriendsPage({super.key});
@@ -13,7 +15,8 @@ class ListFriendsPage extends StatefulWidget {
   State<ListFriendsPage> createState() => _ListFriendsPageState();
 }
 
-class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProviderStateMixin {
+class _ListFriendsPageState extends State<ListFriendsPage>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _friendsList = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -50,7 +53,13 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
       final currentUser = await HiveService.instance.getCurrentUserId();
       _currentUserId = currentUser;
 
-      final friends = await FriendService.getFriendsList(_currentUserId);
+      final friendsResult = await GetIt.I<FriendRepository>().getFriendsList(
+        _currentUserId,
+      );
+      final friends = friendsResult.fold(
+        (l) => throw Exception(l.message),
+        (r) => r,
+      );
       setState(() {
         _friendsList = friends;
         _isLoading = false;
@@ -66,7 +75,8 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
 
   void _removeFriend(String friendId) {
     setState(() {
-      _friendsList = _friendsList.where((friend) => friend['userId'] != friendId).toList();
+      _friendsList =
+          _friendsList.where((friend) => friend['userId'] != friendId).toList();
     });
     _animationController.forward(from: 0.0);
   }
@@ -83,7 +93,11 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
           onPressed: () => Navigator.pop(context),
           color: context.theme.textColor,
         ),
-        title: const TitleText('Friends List', fontSize: 25, fontWeight: FontWeight.bold),
+        title: const TitleText(
+          'Friends List',
+          fontSize: 25,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -141,9 +155,11 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
       child: ListTile(
         leading: CircleAvatar(
           radius: 25,
-          backgroundImage: friend['photoUrl'] != null && friend['photoUrl'].startsWith('http')
-              ? NetworkImage(friend['photoUrl'])
-              : const AssetImage('assets/images/avatar.png'),
+          backgroundImage:
+              friend['photoUrl'] != null &&
+                      friend['photoUrl'].startsWith('http')
+                  ? NetworkImage(friend['photoUrl'])
+                  : const AssetImage('assets/images/avatar.png'),
         ),
         title: TitleText(
           friend['name'] ?? 'Unknown',
@@ -152,7 +168,9 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
           color: context.theme.textColor,
         ),
         subtitle: TitleText(
-          friend['aboutMe']?.isNotEmpty == true ? friend['aboutMe'] : 'No description',
+          friend['aboutMe']?.isNotEmpty == true
+              ? friend['aboutMe']
+              : 'No description',
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: context.theme.textColor.withOpacity(0.7),
@@ -160,31 +178,46 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
         trailing: OutlinedButton(
           style: OutlinedButton.styleFrom(
             side: BorderSide(color: context.theme.red),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           ),
           onPressed: () async {
             final confirmed = await showDialog<bool>(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Unfriend'),
-                content: Text('Are you sure you want to unfriend ${friend['name']}?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel'),
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('Unfriend'),
+                    content: Text(
+                      'Are you sure you want to unfriend ${friend['name']}?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text(
+                          'Unfriend',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Unfriend', style: TextStyle(color: Colors.red)),
-                  ),
-                ],
-              ),
             );
 
             if (confirmed == true) {
               try {
-                await FriendService.cancelFriendRequest(friend['requestId']);
+                await GetIt.I<FriendRepository>()
+                    .cancelFriendRequest(friend['requestId'])
+                    .then(
+                      (result) => result.fold(
+                        (l) => throw Exception(l.message),
+                        (_) => null,
+                      ),
+                    );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Unfriended ${friend['name']}')),
@@ -200,9 +233,13 @@ class _ListFriendsPageState extends State<ListFriendsPage> with SingleTickerProv
               }
             }
           },
-          child: const Text('Unfriend', style: TextStyle(fontSize: 12, color: Colors.red)),
+          child: const Text(
+            'Unfriend',
+            style: TextStyle(fontSize: 12, color: Colors.red),
+          ),
         ),
       ),
     );
   }
 }
+
