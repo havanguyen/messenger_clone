@@ -1,19 +1,15 @@
 import 'dart:io';
-import 'package:appwrite/appwrite.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
-
-import 'app_write_config.dart';
-import 'network_utils.dart';
+import 'package:messenger_clone/common/services/network_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DeviceService {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
-  static Databases get databases => Databases(_client);
-
-  static Future<List<Map<String, dynamic>>> getUserDevices(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUserDevices(
+    String userId,
+  ) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
         final deviceInfo = DeviceInfoPlugin();
@@ -32,25 +28,20 @@ class DeviceService {
           );
         }
 
-        final response = await databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.deviceCollectionId,
-          queries: [
-            Query.equal('userId', userId),
-          ],
-        );
+        final response = await _supabase
+            .from('devices')
+            .select()
+            .eq('userId', userId);
 
-        return response.documents.map((doc) {
+        return (response as List).map((doc) {
           return {
-            'documentId': doc.$id,
-            'deviceId': doc.data['deviceId'] as String,
-            'platform': doc.data['platform'] as String,
-            'lastLogin': doc.data['lastLogin'] as String,
-            'isCurrentDevice': doc.data['deviceId'] == currentDeviceId,
+            'documentId': doc['id'] ?? doc['\$id'],
+            'deviceId': doc['deviceId'] as String,
+            'platform': doc['platform'] as String,
+            'lastLogin': doc['lastLogin'] as String,
+            'isCurrentDevice': doc['deviceId'] == currentDeviceId,
           };
         }).toList();
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to fetch user devices: ${e.message}');
       } catch (e) {
         throw Exception('Error fetching user devices: $e');
       }
@@ -60,13 +51,9 @@ class DeviceService {
   static Future<void> removeDevice(String documentId) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        await databases.deleteDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.deviceCollectionId,
-          documentId: documentId,
-        );
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to remove device: ${e.message}');
+        await _supabase.from('devices').delete().eq('id', documentId);
+      } catch (e) {
+        throw Exception('Failed to remove device: $e');
       }
     });
   }
@@ -87,19 +74,15 @@ class DeviceService {
           return false;
         }
 
-        final isExitUserAndDevice = await databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.deviceCollectionId,
-          queries: [
-            Query.equal('userId', userId),
-            Query.equal('deviceId', deviceId),
-            Query.limit(1),
-          ],
-        );
-        if (isExitUserAndDevice.documents.isNotEmpty) {
-          return true;
-        }
-        return false;
+        final response =
+            await _supabase
+                .from('devices')
+                .select('id')
+                .eq('userId', userId)
+                .eq('deviceId', deviceId)
+                .maybeSingle();
+
+        return response != null;
       } catch (e) {
         throw Exception('Failed to check device login history: $e');
       }
@@ -128,40 +111,29 @@ class DeviceService {
           );
         }
 
-        final existingDevice = await databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.deviceCollectionId,
-          queries: [
-            Query.equal('userId', userId),
-            Query.equal('deviceId', deviceId),
-            Query.limit(1),
-          ],
-        );
+        final existingDevice =
+            await _supabase
+                .from('devices')
+                .select()
+                .eq('userId', userId)
+                .eq('deviceId', deviceId)
+                .maybeSingle();
 
-        if (existingDevice.documents.isNotEmpty) {
-          await databases.updateDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.deviceCollectionId,
-            documentId: existingDevice.documents.first.$id,
-            data: {
-              'lastLogin': DateTime.now().toIso8601String(),
-            },
-          );
+        if (existingDevice != null) {
+          await _supabase
+              .from('devices')
+              .update({'lastLogin': DateTime.now().toIso8601String()})
+              .eq('id', existingDevice['id'] ?? existingDevice['\$id']);
         } else {
-          await databases.createDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.deviceCollectionId,
-            documentId: ID.unique(),
-            data: {
-              'userId': userId,
-              'deviceId': deviceId,
-              'platform': platform,
-              'lastLogin': DateTime.now().toIso8601String(),
-            },
-          );
+          await _supabase.from('devices').insert({
+            'userId': userId,
+            'deviceId': deviceId,
+            'platform': platform,
+            'lastLogin': DateTime.now().toIso8601String(),
+          });
         }
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to save device info: ${e.message}');
+      } catch (e) {
+        throw Exception('Failed to save device info: $e');
       }
     });
   }

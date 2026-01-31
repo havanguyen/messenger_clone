@@ -3,17 +3,13 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_windows
+  app_links
+  cloud_firestore
   connectivity_plus
-  desktop_webview_window
   file_selector_windows
+  firebase_auth
   firebase_core
-  flutter_volume_controller
-  permission_handler_windows
   url_launcher_windows
-  window_to_front
-  zego_express_engine
-  zego_zim
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

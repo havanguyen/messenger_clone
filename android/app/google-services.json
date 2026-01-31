@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "1479652704",
-    "project_id": "appwrite-messaging-70c26",
-    "storage_bucket": "appwrite-messaging-70c26.firebasestorage.app"
+    "project_number": "850801685937",
+    "project_id": "messenger-c8782",
+    "storage_bucket": "messenger-c8782.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1479652704:android:8420ebf932216b63b31a05",
+        "mobilesdk_app_id": "1:850801685937:android:2a3af25c3736a3654b3990",
         "android_client_info": {
           "package_name": "com.example.messenger_clone"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "850801685937-dri8ifplppghmq91lvtra6r943dp7c4o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCUF8BenWRR0WqqYd3Aq9AG0odfQdlfbYE"
+          "current_key": "AIzaSyBHwlTxvplTfsT2bNd_ZgFp4unwDVHI8ZM"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "850801685937-dri8ifplppghmq91lvtra6r943dp7c4o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

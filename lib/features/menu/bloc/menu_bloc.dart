@@ -1,4 +1,3 @@
-import 'package:appwrite/appwrite.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/common/services/auth_service.dart';
@@ -18,7 +17,10 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
     on<RefreshData>(_onRefreshData);
   }
 
-  Future<void> _onFetchUserData(FetchUserData event, Emitter<MenuState> emit) async {
+  Future<void> _onFetchUserData(
+    FetchUserData event,
+    Emitter<MenuState> emit,
+  ) async {
     emit(MenuLoading());
     try {
       String userId = await HiveService.instance.getCurrentUserId();
@@ -26,35 +28,43 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
       if (result.containsKey('error')) {
         emit(MenuError(result['error'] as String));
       } else {
-        emit(MenuLoaded(
-          userName: result['userName'] as String?,
-          userId: result['userId'] as String?,
-          email: result['email'] as String?,
-          aboutMe: result['aboutMe'] as String?,
-          photoUrl: result['photoUrl'] as String?,
-          pendingMessagesCount: state.pendingMessagesCount,
-          friendRequestsCount: state.friendRequestsCount,
-        ));
+        emit(
+          MenuLoaded(
+            userName: result['userName'] as String?,
+            userId: result['userId'] as String?,
+            email: result['email'] as String?,
+            aboutMe: result['aboutMe'] as String?,
+            photoUrl: result['photoUrl'] as String?,
+            pendingMessagesCount: state.pendingMessagesCount,
+            friendRequestsCount: state.friendRequestsCount,
+          ),
+        );
       }
     } catch (e) {
       emit(MenuError('Failed to fetch user data: $e'));
     }
   }
 
-  Future<void> _onFetchNotificationCounts(FetchNotificationCounts event, Emitter<MenuState> emit) async {
+  Future<void> _onFetchNotificationCounts(
+    FetchNotificationCounts event,
+    Emitter<MenuState> emit,
+  ) async {
     try {
       final user = await AuthService.getCurrentUser();
       if (user != null) {
-        final friendRequestsCount = await FriendService.getPendingFriendRequestsCount(user.$id);
-        emit(MenuLoaded(
-          userName: state.userName,
-          userId: state.userId,
-          email: state.email,
-          aboutMe: state.aboutMe,
-          photoUrl: state.photoUrl,
-          pendingMessagesCount: 2, // Placeholder, replace with actual logic
-          friendRequestsCount: friendRequestsCount,
-        ));
+        final friendRequestsCount =
+            await FriendService.getPendingFriendRequestsCount(user.uid);
+        emit(
+          MenuLoaded(
+            userName: state.userName,
+            userId: state.userId,
+            email: state.email,
+            aboutMe: state.aboutMe,
+            photoUrl: state.photoUrl,
+            pendingMessagesCount: 2, // Placeholder, replace with actual logic
+            friendRequestsCount: friendRequestsCount,
+          ),
+        );
       }
     } catch (e) {
       emit(MenuError('Failed to fetch notification counts: $e'));
@@ -71,7 +81,10 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
     }
   }
 
-  Future<void> _onDeleteAccount(DeleteAccount event, Emitter<MenuState> emit) async {
+  Future<void> _onDeleteAccount(
+    DeleteAccount event,
+    Emitter<MenuState> emit,
+  ) async {
     emit(MenuLoading());
     try {
       final user = await AuthService.getCurrentUser();
@@ -91,7 +104,10 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
     }
   }
 
-  Future<void> _onRefreshData(RefreshData event, Emitter<MenuState> emit) async {
+  Future<void> _onRefreshData(
+    RefreshData event,
+    Emitter<MenuState> emit,
+  ) async {
     emit(MenuLoading());
     try {
       String userId = await HiveService.instance.getCurrentUserId();
@@ -103,17 +119,21 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
       final user = await AuthService.getCurrentUser();
       int? friendRequestsCount;
       if (user != null) {
-        friendRequestsCount = await FriendService.getPendingFriendRequestsCount(user.$id);
+        friendRequestsCount = await FriendService.getPendingFriendRequestsCount(
+          user.uid,
+        );
       }
-      emit(MenuLoaded(
-        userName: result['userName'] as String?,
-        userId: result['userId'] as String?,
-        email: result['email'] as String?,
-        aboutMe: result['aboutMe'] as String?,
-        photoUrl: result['photoUrl'] as String?,
-        pendingMessagesCount: 2, // Placeholder, replace with actual logic
-        friendRequestsCount: friendRequestsCount,
-      ));
+      emit(
+        MenuLoaded(
+          userName: result['userName'] as String?,
+          userId: result['userId'] as String?,
+          email: result['email'] as String?,
+          aboutMe: result['aboutMe'] as String?,
+          photoUrl: result['photoUrl'] as String?,
+          pendingMessagesCount: 2, // Placeholder, replace with actual logic
+          friendRequestsCount: friendRequestsCount,
+        ),
+      );
     } catch (e) {
       emit(MenuError('Failed to refresh data: $e'));
     }
@@ -121,16 +141,12 @@ class MenuBloc extends Bloc<MenuEvent, MenuState> {
 
   Future<bool> _verifyPassword(String password) async {
     try {
-      await AuthService.account.updatePassword(
-        password: password,
-        oldPassword: password,
-      );
+      await AuthService.reauthenticate(password);
       return true;
     } catch (e) {
-      if (e is AppwriteException) {
-        if (e.code == 400) return true;
-        if (e.code == 401) return false;
-        if (e.code == 429) throw Exception('Rate limit exceeded');
+      if (e.toString().contains('wrong-password') ||
+          e.toString().contains('invalid-credential')) {
+        return false; // Invalid password
       }
       throw Exception('Verification failed: $e');
     }

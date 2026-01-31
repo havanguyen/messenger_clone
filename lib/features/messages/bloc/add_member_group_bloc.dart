@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/common/services/hive_service.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 import 'package:messenger_clone/features/messages/bloc/add_member_group_event.dart';
@@ -8,13 +8,13 @@ import 'package:messenger_clone/features/messages/bloc/add_member_group_state.da
 
 class AddMemberGroupBloc
     extends Bloc<AddMemberGroupEvent, AddMemberGroupState> {
-  final AppwriteRepository _appwriteRepository;
+  final ChatRepository _chatRepository;
   final GroupMessage _groupMessage;
 
   AddMemberGroupBloc({
-    AppwriteRepository? appwriteRepository,
+    ChatRepository? chatRepository,
     required GroupMessage groupMessage,
-  }) : _appwriteRepository = appwriteRepository ?? AppwriteRepository(),
+  }) : _chatRepository = chatRepository ?? ChatRepository(),
        _groupMessage = groupMessage,
        super(const AddMemberGroupInitial()) {
     on<LoadFriendsEvent>(_onLoadFriends);
@@ -34,7 +34,7 @@ class AddMemberGroupBloc
       if (currentUserId == null) {
         throw Exception('User not authenticated');
       }
-      final friends = await _appwriteRepository.getFriendsList(currentUserId);
+      final friends = await _chatRepository.getFriendsList(currentUserId);
       final filteredFriends =
           friends
               .where((friend) => !event.userEnjoyedIds.contains(friend.id))
@@ -111,7 +111,7 @@ class AddMemberGroupBloc
         Set<String> memberIds =
             _groupMessage.users.map((user) => user.id).toSet();
         memberIds.addAll(currentState.selectedFriends.toList());
-        final newGroupMessage = await _appwriteRepository.updateMemberOfGroup(
+        final newGroupMessage = await _chatRepository.updateMemberOfGroup(
           _groupMessage.groupMessagesId,
           memberIds,
         );

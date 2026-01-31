@@ -5,7 +5,7 @@ import 'package:messenger_clone/common/routes/routes.dart';
 import 'package:messenger_clone/common/widgets/custom_text_style.dart';
 import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
 import 'package:messenger_clone/features/chat/bloc/user_bloc.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 
 class SearchingPage extends StatelessWidget {
   const SearchingPage({super.key});
@@ -15,7 +15,7 @@ class SearchingPage extends StatelessWidget {
     return BlocProvider(
       create:
           (context) =>
-              UserBloc(appwriteRepository: AppwriteRepository())
+              UserBloc(chatRepository: ChatRepository())
                 ..add(GetAllUsersEvent()),
       child: Scaffold(
         backgroundColor: context.theme.bg,

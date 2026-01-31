@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
 import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
 import 'package:messenger_clone/common/services/auth_service.dart';
@@ -66,7 +65,7 @@ class _MenuPageState extends State<MenuPage> {
     try {
       final userId = await HiveService.instance.getCurrentUserId();
       final friendRequestsCount =
-      await FriendService.getPendingFriendRequestsCount(userId);
+          await FriendService.getPendingFriendRequestsCount(userId);
       if (!mounted) return;
       setState(() {
         _friendRequestsCount = friendRequestsCount;
@@ -83,10 +82,7 @@ class _MenuPageState extends State<MenuPage> {
       isLoading = true;
       errorMessage = null;
     });
-    await Future.wait([
-      _fetchUserData(),
-      _fetchNotificationCounts(),
-    ]);
+    await Future.wait([_fetchUserData(), _fetchNotificationCounts()]);
   }
 
   Future<String?> _promptForPassword() async {
@@ -94,24 +90,25 @@ class _MenuPageState extends State<MenuPage> {
     final password = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text("Enter Password"),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: "Password"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Enter Password"),
+            content: TextField(
+              controller: controller,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Password"),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                child: const Text("Confirm"),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text("Confirm"),
-          ),
-        ],
-      ),
     );
 
     if (password == null || password.isEmpty) {
@@ -128,20 +125,12 @@ class _MenuPageState extends State<MenuPage> {
 
   Future<bool> _verifyPassword(String password) async {
     try {
-      await AuthService.account.updatePassword(
-        password: password,
-        oldPassword: password,
-      );
+      await AuthService.reauthenticate(password);
       return true;
     } catch (e) {
-      if (e is AppwriteException) {
-        if (e.code == 400) return true;
-        if (e.code == 401) return false;
-        if (e.code == 429) {
-          throw Exception("Rate limit exceeded. Please try again later.");
-        }
-      }
-      throw Exception("Verification failed: $e");
+      // Basic check for Firebase Auth errors, or generic logging
+      print('Password verification failed: $e');
+      return false;
     }
   }
 
@@ -173,14 +162,14 @@ class _MenuPageState extends State<MenuPage> {
               context: context,
               title: 'Notification',
               message:
-              'Your request has been submitted. The account will be deleted shortly.',
+                  'Your request has been submitted. The account will be deleted shortly.',
               confirmText: 'Close',
             );
             if (!mounted) return;
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
+              (route) => false,
             );
           },
         );
@@ -207,7 +196,7 @@ class _MenuPageState extends State<MenuPage> {
           context: context,
           title: "Error",
           message:
-          "An error occurred: $e. Please try again or contact support.",
+              "An error occurred: $e. Please try again or contact support.",
         );
       }
     }
@@ -251,7 +240,7 @@ class _MenuPageState extends State<MenuPage> {
                       context,
                       Icons.chat_bubble,
                       'Pending Messages',
-                          () {},
+                      () {},
                       notificationCount: _pendingMessagesCount,
                     ),
                     _buildMenuItem(context, Icons.archive, 'Archive', () {}),
@@ -267,7 +256,7 @@ class _MenuPageState extends State<MenuPage> {
                       context,
                       Icons.group,
                       'Friend Requests',
-                          () {
+                      () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -277,22 +266,33 @@ class _MenuPageState extends State<MenuPage> {
                       },
                       notificationCount: _friendRequestsCount,
                     ),
-                    _buildMenuItem(context, Icons.group_add, 'Find Friends', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const FindFriendsPage()),
-                      );
-                    }),
+                    _buildMenuItem(
+                      context,
+                      Icons.group_add,
+                      'Find Friends',
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FindFriendsPage(),
+                          ),
+                        );
+                      },
+                    ),
                     _buildMenuItem(context, Icons.star, 'List Friends', () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ListFriendsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ListFriendsPage(),
+                        ),
                       );
                     }),
                     _buildMenuItem(context, Icons.group, 'Create Group', () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CreateGroupPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const CreateGroupPage(),
+                        ),
                       );
                     }),
                     TitleText(
@@ -309,9 +309,7 @@ class _MenuPageState extends State<MenuPage> {
             ),
             if (isLoading)
               Center(
-                child: CircularProgressIndicator(
-                  color: context.theme.grey,
-                ),
+                child: CircularProgressIndicator(color: context.theme.grey),
               ),
           ],
         ),
@@ -339,11 +337,12 @@ class _MenuPageState extends State<MenuPage> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundImage: photoUrl != null
-                ? (photoUrl!.startsWith('http')
-                ? NetworkImage(photoUrl!)
-                : const AssetImage('assets/images/avatar.png'))
-                : const AssetImage('assets/images/avatar.png'),
+            backgroundImage:
+                photoUrl != null
+                    ? (photoUrl!.startsWith('http')
+                        ? NetworkImage(photoUrl!)
+                        : const AssetImage('assets/images/avatar.png'))
+                    : const AssetImage('assets/images/avatar.png'),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -373,18 +372,20 @@ class _MenuPageState extends State<MenuPage> {
           ),
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EditProfilePage(
-                  initialName: userName,
-                  initialEmail: email,
-                  initialAboutMe: aboutMe,
-                  initialPhotoUrl: photoUrl,
-                  userId: userId ?? '',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => EditProfilePage(
+                          initialName: userName,
+                          initialEmail: email,
+                          initialAboutMe: aboutMe,
+                          initialPhotoUrl: photoUrl,
+                          userId: userId ?? '',
+                        ),
+                  ),
                 ),
-              ),
-            ),
           ),
         ],
       ),
@@ -392,12 +393,12 @@ class _MenuPageState extends State<MenuPage> {
   }
 
   Widget _buildMenuItem(
-      BuildContext context,
-      IconData icon,
-      String title,
-      VoidCallback onTap, {
-        int? notificationCount,
-      }) {
+    BuildContext context,
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    int? notificationCount,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(15),
@@ -473,7 +474,7 @@ class _MenuPageState extends State<MenuPage> {
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
+                    (route) => false,
                   );
                 },
               );
@@ -490,12 +491,12 @@ class _MenuPageState extends State<MenuPage> {
             context,
             Icons.delete_forever,
             'Delete Account',
-                () async {
+            () async {
               if (await DialogUtils.showConfirmationDialog(
                 context: context,
                 title: 'Confirm',
                 message:
-                'Are you sure you want to delete your account? This action cannot be undone.',
+                    'Are you sure you want to delete your account? This action cannot be undone.',
                 confirmText: 'Next',
                 cancelText: 'Cancel',
               )) {

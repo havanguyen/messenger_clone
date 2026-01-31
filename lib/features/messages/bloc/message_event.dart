@@ -45,10 +45,10 @@ final class ClearMessageEvent extends MessageEvent {
 }
 
 final class ReceiveMessageEvent extends MessageEvent {
-  final RealtimeMessage realtimeMessage;
-  const ReceiveMessageEvent(this.realtimeMessage);
+  final List<Map<String, dynamic>> payload;
+  const ReceiveMessageEvent(this.payload);
   @override
-  List<Object> get props => [realtimeMessage];
+  List<Object> get props => [payload];
 }
 
 final class AddReactionEvent extends MessageEvent {

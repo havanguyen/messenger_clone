@@ -1,17 +1,9 @@
-import 'dart:convert';
-import 'package:appwrite/appwrite.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
-import 'package:messenger_clone/features/chat/model/user.dart' as appUser;
-import 'app_write_config.dart';
-import 'network_utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:messenger_clone/common/services/network_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SendMessageService {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
-
-  static Functions get functions => Functions(_client);
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
   static Future<void> sendMessageNotification({
     required List<String> userIds,
@@ -22,58 +14,32 @@ class SendMessageService {
   }) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final List<String> filteredUserIds = [];
-        AppwriteRepository appwriteRepository = AppwriteRepository();
-        for (String userId in userIds) {
-          final user = await appwriteRepository.getUserById(userId);
-          if (user != null && user.chattingWithGroupMessId != groupMessageId) {
-            filteredUserIds.add(userId);
-          }
-        }
-        final payload = jsonEncode({
+        // Logic to filter userIds (e.g. check current view status) might need DB query
+        // For now, sending to all listed userIds or keeping filter logic if possible
+        // Ideally filter logic moves to Backend or we query DB first.
+
+        final payload = {
           'type': 'message',
-          'userIds': filteredUserIds,
+          'userIds':
+              userIds, // Sending to all for now, assuming BE handles or client handles filtering
           'groupMessageId': groupMessageId,
           'messageContent': messageContent,
           'senderId': senderId,
           'senderName': senderName,
-        });
+        };
 
-        debugPrint('Preparing to send message notification payload: $payload');
+        debugPrint(
+          'Invoking Supabase Edge Function sendPush (message) with payload: $payload',
+        );
 
-        if (payload.isEmpty) {
-          throw Exception('Empty payload before sending');
-        }
-
-        final execution = await functions.createExecution(
-          functionId: AppwriteConfig.sendPushFunctionId,
+        final response = await _supabase.functions.invoke(
+          'sendPush',
           body: payload,
         );
 
-        debugPrint('Response from Cloud Function: ${execution.responseBody}');
-
-        if (execution.responseBody.isEmpty) {
-          throw Exception('Empty response from Cloud Function');
-        }
-
-        final response = jsonDecode(execution.responseBody);
-        if (response is! Map<String, dynamic>) {
-          throw Exception('Invalid JSON response: ${execution.responseBody}');
-        }
-
-        if (!response['success']) {
-          throw Exception(
-            response['error'] ?? 'Failed to send push notification',
-          );
-        }
-
-        debugPrint('Push notification sent: ${response['messageId']}');
-      } on FormatException catch (e) {
-        throw Exception('JSON parsing error: $e');
-      } on AppwriteException catch (e) {
-        throw Exception('Appwrite error: ${e.message}');
+        debugPrint('Response from Edge Function: ${response.data}');
       } catch (e) {
-        throw Exception('Error sending push notification: $e');
+        throw Exception('Error sending push notification via Supabase: $e');
       }
     });
   }

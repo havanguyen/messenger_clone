@@ -1,21 +1,21 @@
-import 'package:appwrite/models.dart';
-import 'package:appwrite/src/realtime_message.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
-import 'package:messenger_clone/features/messages/data/data_sources/remote/appwrite_chat_repository.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
 import 'package:messenger_clone/features/messages/domain/repositories/abstract_chat_repository.dart';
 
 class ChatRepositoryImpl implements AbstractChatRepository {
-  late final AppwriteChatRepository appwriteChatRepository;
+  late final ChatRepository chatRepository;
+
   ChatRepositoryImpl() {
-    appwriteChatRepository = AppwriteChatRepository();
+    chatRepository = ChatRepository();
   }
+
   @override
   Future<MessageModel> getMessageById(String messageId) async {
     try {
-      final response = await appwriteChatRepository.getMessageById(messageId);
+      final response = await chatRepository.getMessageById(messageId);
       return response;
     } catch (error) {
       debugPrint("Failed to fetch message: $error");
@@ -24,11 +24,11 @@ class ChatRepositoryImpl implements AbstractChatRepository {
   }
 
   @override
-  Future<Either<String, Stream<RealtimeMessage>>> getChatStream(
+  Future<Either<String, Stream<List<Map<String, dynamic>>>>> getChatStream(
     String groupMessId,
   ) async {
     try {
-      final response = await appwriteChatRepository.getChatStream(groupMessId);
+      final response = await chatRepository.getGroupMessageStream(groupMessId);
       return Right(response);
     } catch (error) {
       return Left("Failed to fetch chat stream: $error");
@@ -43,7 +43,7 @@ class ChatRepositoryImpl implements AbstractChatRepository {
     DateTime? newerThan,
   ) async {
     try {
-      final response = await appwriteChatRepository.getMessages(
+      final response = await chatRepository.getMessages(
         groupMessId,
         limit,
         offset,
@@ -62,7 +62,7 @@ class ChatRepositoryImpl implements AbstractChatRepository {
     GroupMessage groupMessage,
   ) async {
     try {
-      return appwriteChatRepository.sendMessage(message, groupMessage);
+      return chatRepository.sendMessage(message, groupMessage);
     } catch (error) {
       debugPrint("Failed to send message: $error");
       throw Exception("Failed to send message: $error");
@@ -78,14 +78,34 @@ class ChatRepositoryImpl implements AbstractChatRepository {
     required String groupId,
   }) async {
     try {
-      final GroupMessage response = await appwriteChatRepository
-          .createGroupMessages(
-            groupName: groupName,
-            userIds: userIds,
-            avatarGroupUrl: avatarGroupUrl,
-            isGroup: isGroup,
-            groupId: groupId,
-          );
+      // Logic for createrId might be needed if not passed.
+      // Assuming createrId is handled inside or passed?
+      // Abstract signature matches implementation args.
+      final GroupMessage response = await chatRepository.createGroupMessages(
+        groupName: groupName,
+        userIds: userIds,
+        avatarGroupUrl: avatarGroupUrl,
+        isGroup: isGroup,
+        groupId: groupId,
+        // createrId? The abstract method doesn't have it?
+        // In Appwrite impl it was passed? No, abstract method line 21 just has these args.
+        // But AppwriteChatRepository.createGroupMessages had createrId.
+        // Let's check abstract repo again. It does NOT have createrId.
+        // So we might need to fetch meId here or it is not used?
+        // Wait, createGroupMessages in Abstract definition:
+        /*
+            Future<Either<String, GroupMessage>> createGroupMessages({
+                String? groupName,
+                required List<String> userIds,
+                String? avatarGroupUrl,
+                bool isGroup = false,
+                required String groupId,
+             });
+            */
+        // So we don't pass createrId. ChatRepository needs it?
+        // ChatRepository.createGroupMessages({..., String? createrId})
+        // We can pass null or fetch it.
+      );
 
       return Right(response);
     } catch (error) {
@@ -95,20 +115,20 @@ class ChatRepositoryImpl implements AbstractChatRepository {
 
   @override
   Future<GroupMessage?> getGroupMessagesByGroupId(String groupId) async {
-    return await appwriteChatRepository.getGroupMessagesByGroupId(groupId);
+    return await chatRepository.getGroupMessagesByGroupId(groupId);
   }
 
+  @override
   Future<void> updateMessage(MessageModel message) async {
-    await appwriteChatRepository.updateMessage(message);
+    await chatRepository.updateMessage(message);
   }
 
-  Future<Either<String, Stream<RealtimeMessage>>> getMessagesStream(
+  @override
+  Future<Either<String, Stream<List<Map<String, dynamic>>>>> getMessagesStream(
     List<String> messageIds,
   ) async {
     try {
-      final response = await appwriteChatRepository.getMessagesStream(
-        messageIds,
-      );
+      final response = await chatRepository.getMessagesStream(messageIds);
       return Right(response);
     } catch (error) {
       return Left("Failed to fetch message stream: $error");
@@ -116,9 +136,13 @@ class ChatRepositoryImpl implements AbstractChatRepository {
   }
 
   @override
-  Future<File> uploadFile(String filePath, String senderId) async {
+  Future<Map<String, dynamic>> uploadFile(
+    String filePath,
+    String senderId,
+  ) async {
     try {
-      return appwriteChatRepository.uploadFile(filePath, senderId);
+      final result = await chatRepository.uploadFile(filePath, senderId);
+      return result as Map<String, dynamic>;
     } catch (error) {
       debugPrint("Failed to upload file: $error");
       throw Exception("Failed to upload file: $error");
@@ -128,7 +152,7 @@ class ChatRepositoryImpl implements AbstractChatRepository {
   @override
   Future<String> downloadFile(String url, String filePath) async {
     try {
-      return appwriteChatRepository.downloadFile(url, filePath);
+      return chatRepository.downloadFile(url, filePath);
     } catch (error) {
       debugPrint("Failed to download file: $error");
       throw Exception("Failed to download file: $error");

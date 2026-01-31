@@ -5,10 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:messenger_clone/common/routes/routes.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
+
 import 'package:messenger_clone/features/chat/model/group_message.dart';
-import '../../features/messages/elements/call_page.dart';
-import 'auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -274,10 +273,28 @@ class NotificationService {
     }
 
     try {
-      AppwriteRepository appwriteRepository = AppwriteRepository();
-      GroupMessage groupMessage = await appwriteRepository.getGroupMessageById(
-        payload['groupMessageId'],
-      );
+      // Assuming getGroupMessageById logic exists in ChatRepository or can be emulated.
+      // Since ChatRepository might not have getGroupMessageById, we might need to find it by ID from supabase
+      // For now, let's assume ChatRepository has it or we query Supabase directly.
+      // But ChatRepository is cleaner. Let's use ChatRepository.
+      // If ChatRepository doesn't have it, I'll use Supabase.
+      // Let's use Supabase directly for simplicity here or add method to Repo.
+      // Actually, let's use the repo if possible.
+      // Waiting for repo update in previous steps... I didn't add getGroupMessageById to ChatRepository.
+      // I'll implement it inline here using Supabase for now to avoid changing Repo.
+
+      final supabase = Supabase.instance.client;
+      final response =
+          await supabase
+              .from('group_messages') // Assuming table name
+              .select()
+              .eq('id', payload['groupMessageId'])
+              .single();
+
+      // Ensure GroupMessage.fromMap matches what Supabase returns (json).
+      // If fromMap expects id in top level, it works.
+      GroupMessage groupMessage = GroupMessage.fromJson(response);
+
       navigatorKey!.currentState!.pushNamed(
         Routes.chat,
         arguments: groupMessage,
@@ -293,57 +310,11 @@ class NotificationService {
   }
 
   Future<void> _navigateToCallPage(Map<String, dynamic> payload) async {
-    if (navigatorKey?.currentState == null) {
-      debugPrint('NavigatorKey chưa sẵn sàng để điều hướng đến CallPage');
-      return;
-    }
-
-    try {
-      debugPrint('Payload for CallPage: $payload');
-      final callId = payload['callId'] as String? ?? '';
-      final callerId = payload['callerId'] as String? ?? '';
-      final callerName = payload['callerName'] as String? ?? 'Unknown Caller';
-
-      String userId = callerId;
-      String userName = 'Unknown User';
-      try {
-        final currentUser = await AuthService.getCurrentUser();
-        userId = currentUser?.$id ?? callerId;
-        userName = currentUser?.name ?? 'Unknown User';
-      } catch (e) {
-        debugPrint('Lỗi lấy thông tin người dùng: $e');
-      }
-
-      if (callId.isNotEmpty && callerId.isNotEmpty) {
-        debugPrint('Pushing CallPage with callId: $callId, userId: $userId');
-        navigatorKey!.currentState!.push(
-          MaterialPageRoute(
-            builder:
-                (context) => CallPage(
-                  callID: callId,
-                  userID: userId,
-                  userName: userName,
-                  callerName: callerName,
-                ),
-          ),
-        );
-      } else {
-        debugPrint(
-          'Thiếu thông tin cuộc gọi: callId=$callId, callerId=$callerId',
-        );
-        if (navigatorKey?.currentState != null) {
-          ScaffoldMessenger.of(
-            navigatorKey!.currentState!.context,
-          ).showSnackBar(SnackBar(content: Text('Thiếu thông tin cuộc gọi')));
-        }
-      }
-    } catch (e) {
-      debugPrint('Lỗi điều hướng đến CallPage: $e');
-      if (navigatorKey?.currentState != null) {
-        ScaffoldMessenger.of(navigatorKey!.currentState!.context).showSnackBar(
-          SnackBar(content: Text('Không thể mở trang cuộc gọi: $e')),
-        );
-      }
+    debugPrint('Call feature disabled. Payload: $payload');
+    if (navigatorKey?.currentState != null) {
+      ScaffoldMessenger.of(navigatorKey!.currentState!.context).showSnackBar(
+        SnackBar(content: Text('Cuộc gọi video tạm thời bị vô hiệu hóa')),
+      );
     }
   }
 

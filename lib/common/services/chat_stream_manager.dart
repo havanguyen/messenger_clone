@@ -1,24 +1,25 @@
 import 'dart:async';
-import 'package:appwrite/appwrite.dart';
 import 'package:flutter/foundation.dart';
-
-import 'app_write_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 
+// Helper wrapper to match expected callback signature (RealtimeMessage)
+// or we adapt callback to accept payload.
+// Since we are refactoring, we can change the signature or adapt it.
+// RealtimeMessage was Appwrite class. We define a custom one or use Map.
+
 class ChatStreamManager {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
-  static Realtime get realtime => Realtime(_client);
-
-  StreamSubscription<RealtimeMessage>? _subscription;
+  RealtimeChannel? _channel;
   final Set<GroupMessage> _subscribedGroupIds = {};
-  final Function(RealtimeMessage) _onMessageReceived;
+
+  // Callback expects generic payload now
+  final Function(dynamic) _onMessageReceived;
   final Function(dynamic) _onError;
 
   ChatStreamManager({
-    required Function(RealtimeMessage) onMessageReceived,
+    required Function(dynamic) onMessageReceived,
     required Function(dynamic) onError,
   }) : _onMessageReceived = onMessageReceived,
        _onError = onError;
@@ -27,7 +28,7 @@ class ChatStreamManager {
     String userId,
     List<GroupMessage> initialGroupIds,
   ) async {
-    await _subscription?.cancel();
+    await dispose();
     _subscribedGroupIds.clear();
     _subscribedGroupIds.addAll(initialGroupIds);
 
@@ -35,58 +36,71 @@ class ChatStreamManager {
   }
 
   void _createSubscription(String userId) {
-    List<String> channels = [
-      'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.userCollectionId}.documents.$userId',
-    ];
-    for (GroupMessage group in _subscribedGroupIds) {
-      channels.add(
-        'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.groupMessagesCollectionId}.documents.${group.groupMessagesId}',
-      );
+    // Supabase Realtime Channels
+    // We can listen to changes on 'messages' table for specific conditions?
+    // Postgres Changes Listening:
+    // channel.onPostgresChanges(event: PostgresChangeEvent.all, schema: 'public', table: 'messages', filter: 'receiverId=eq.$userId', callback: ...)
+    // But we are listening to Group Messages.
 
-      if (group.lastMessage != null) {
-        channels.add(
-          'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.messageCollectionId}.documents.${group.lastMessage!.id}',
-        );
-        debugPrint('Subscribing to message: ${group.lastMessage!.id}');
-      }
-    }
-    debugPrint('Subscribing to channels: $channels');
-    final subscription = realtime.subscribe(channels);
-    _subscription = subscription.stream.listen(
-      _onMessageReceived,
-      onError: _onError,
-    );
+    // For simplicity, we subscribe to 'group_messages' or 'messages'.
+    // If we have many groups, one channel listening to 'messages' with specific filter might be hard if we want multiple groups.
+    // Supabase supports listening to table level.
+    // If rows have security policies, we only receive what we are allowed to see.
+    // So listening to 'messages' table updates might be enough if RLS is set up.
+
+    _channel = _supabase.channel('public:messages:$userId');
+
+    _channel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages', // Assuming table name
+          callback: (payload) {
+            debugPrint('Realtime message received: ${payload.newRecord}');
+            // Convert payload to what app expects
+            _onMessageReceived(payload);
+          },
+        )
+        .subscribe((status, error) {
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            debugPrint('Subscribed to realtime messages');
+          } else if (status == RealtimeSubscribeStatus.closed) {
+            debugPrint('Channel closed');
+          } else if (error != null) {
+            debugPrint('Subscription error: $error');
+            _onError(error);
+          }
+        });
+
+    // Note: Appwrite logic was subscribing to specific documents.
+    // Supabase logic is table-based usually.
+    // If we want to filter by group, we rely on RLS or client side filter.
   }
 
   Future<void> addGroupMessage(String userId, GroupMessage group) async {
     if (_subscribedGroupIds.contains(group)) return;
-
-    debugPrint(
-      'Adding group message to subscription: ${group.groupMessagesId}',
-    );
     _subscribedGroupIds.add(group);
-    await _subscription?.cancel();
-    _createSubscription(userId);
+    // In Supabase table-wide subscription, we might not need to re-subscribe if we just rely on RLS.
+    // But if we were filtering (not implemented above), we would need to update filter.
+    // For now, no-op or re-init if meaningful.
   }
 
   Future<void> removeGroupMessage(String userId, GroupMessage group) async {
     if (!_subscribedGroupIds.contains(group)) return;
-
-    debugPrint(
-      'Removing group message from subscription: ${group.groupMessagesId}',
-    );
     _subscribedGroupIds.remove(group);
-    await _subscription?.cancel();
-    _createSubscription(userId);
   }
 
-  List<String> get subscribedGroupIds => List.unmodifiable(_subscribedGroupIds);
+  List<String> get subscribedGroupIds =>
+      _subscribedGroupIds.map((e) => e.groupMessagesId).toList();
 
   bool isSubscribedToGroup(GroupMessage group) =>
       _subscribedGroupIds.contains(group);
 
   Future<void> dispose() async {
-    await _subscription?.cancel();
+    if (_channel != null) {
+      await _supabase.removeChannel(_channel!);
+      _channel = null;
+    }
     _subscribedGroupIds.clear();
   }
 }

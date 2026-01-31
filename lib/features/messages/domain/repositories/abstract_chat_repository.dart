@@ -1,5 +1,3 @@
-import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart';
 import 'package:dartz/dartz.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
@@ -15,7 +13,7 @@ abstract class AbstractChatRepository {
     MessageModel message,
     GroupMessage groupMessage,
   );
-  Future<Either<String, Stream<RealtimeMessage>>> getChatStream(
+  Future<Either<String, Stream<List<Map<String, dynamic>>>>> getChatStream(
     String groupChatId,
   );
   Future<Either<String, GroupMessage>> createGroupMessages({
@@ -27,10 +25,10 @@ abstract class AbstractChatRepository {
   });
   Future<GroupMessage?> getGroupMessagesByGroupId(String groupId);
   Future<void> updateMessage(MessageModel message);
-  Future<Either<String, Stream<RealtimeMessage>>> getMessagesStream(
+  Future<Either<String, Stream<List<Map<String, dynamic>>>>> getMessagesStream(
     List<String> messageIds,
   );
-  Future<File> uploadFile(String filePath, String senderId);
+  Future<Map<String, dynamic>> uploadFile(String filePath, String senderId);
   Future<String> downloadFile(String url, String filePath);
   Future<MessageModel> getMessageById(String messageId);
 }

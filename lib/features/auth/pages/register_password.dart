@@ -1,4 +1,4 @@
-import 'package:appwrite/appwrite.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messenger_clone/features/auth/pages/confirmation_code_screen.dart';
 
@@ -158,15 +158,17 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                         MaterialPageRoute(builder: (context) => LoginScreen()),
                         (route) => false,
                       );
-                    } on AppwriteException catch (e) {
+                    } on FirebaseAuthException catch (e) {
                       if (!context.mounted) return;
                       Navigator.of(context).pop();
 
                       String errorMessage = "Error creating account";
-                      if (e.code == 409) {
+                      if (e.code == 'email-already-in-use') {
                         errorMessage = "Email has been registered";
-                      } else if (e.code == 400) {
-                        errorMessage = "Invalid information";
+                      } else if (e.code == 'weak-password') {
+                        errorMessage = "Password is too weak";
+                      } else if (e.code == 'invalid-email') {
+                        errorMessage = "Invalid email";
                       }
 
                       await CustomAlertDialog.show(

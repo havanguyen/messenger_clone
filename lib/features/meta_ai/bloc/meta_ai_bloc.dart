@@ -44,7 +44,10 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
     add(UpdateConnectivity(result != ConnectivityResult.none));
   }
 
-  Future<void> _onUpdateConnectivity(UpdateConnectivity event, Emitter<MetaAiState> emit) async {
+  Future<void> _onUpdateConnectivity(
+    UpdateConnectivity event,
+    Emitter<MetaAiState> emit,
+  ) async {
     bool wasConnected = true;
     if (state is MetaAiLoaded) {
       wasConnected = (state as MetaAiLoaded).isConnected;
@@ -58,45 +61,51 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       wasConnected = (state as MetaAiLoading).isConnected;
     }
 
-    emit(MetaAiConnectivityChanged(
-      isConnected: event.isConnected,
-      conversations: state is MetaAiLoaded
-          ? (state as MetaAiLoaded).conversations
-          : state is MetaAiError
-          ? (state as MetaAiError).conversations
-          : state is MetaAiSyncing
-          ? (state as MetaAiSyncing).conversations
-          : state is MetaAiConnectivityChanged
-          ? (state as MetaAiConnectivityChanged).conversations
-          : const [],
-      messages: state is MetaAiLoaded
-          ? (state as MetaAiLoaded).messages
-          : state is MetaAiError
-          ? (state as MetaAiError).messages
-          : state is MetaAiSyncing
-          ? (state as MetaAiSyncing).messages
-          : state is MetaAiConnectivityChanged
-          ? (state as MetaAiConnectivityChanged).messages
-          : const [],
-      currentConversationId: state is MetaAiLoaded
-          ? (state as MetaAiLoaded).currentConversationId
-          : state is MetaAiError
-          ? (state as MetaAiError).currentConversationId
-          : state is MetaAiSyncing
-          ? (state as MetaAiSyncing).currentConversationId
-          : state is MetaAiConnectivityChanged
-          ? (state as MetaAiConnectivityChanged).currentConversationId
-          : null,
-      aiMode: state is MetaAiLoaded
-          ? (state as MetaAiLoaded).aiMode
-          : state is MetaAiError
-          ? (state as MetaAiError).aiMode
-          : state is MetaAiSyncing
-          ? (state as MetaAiSyncing).aiMode
-          : state is MetaAiConnectivityChanged
-          ? (state as MetaAiConnectivityChanged).aiMode
-          : 'friend',
-    ));
+    emit(
+      MetaAiConnectivityChanged(
+        isConnected: event.isConnected,
+        conversations:
+            state is MetaAiLoaded
+                ? (state as MetaAiLoaded).conversations
+                : state is MetaAiError
+                ? (state as MetaAiError).conversations
+                : state is MetaAiSyncing
+                ? (state as MetaAiSyncing).conversations
+                : state is MetaAiConnectivityChanged
+                ? (state as MetaAiConnectivityChanged).conversations
+                : const [],
+        messages:
+            state is MetaAiLoaded
+                ? (state as MetaAiLoaded).messages
+                : state is MetaAiError
+                ? (state as MetaAiError).messages
+                : state is MetaAiSyncing
+                ? (state as MetaAiSyncing).messages
+                : state is MetaAiConnectivityChanged
+                ? (state as MetaAiConnectivityChanged).messages
+                : const [],
+        currentConversationId:
+            state is MetaAiLoaded
+                ? (state as MetaAiLoaded).currentConversationId
+                : state is MetaAiError
+                ? (state as MetaAiError).currentConversationId
+                : state is MetaAiSyncing
+                ? (state as MetaAiSyncing).currentConversationId
+                : state is MetaAiConnectivityChanged
+                ? (state as MetaAiConnectivityChanged).currentConversationId
+                : null,
+        aiMode:
+            state is MetaAiLoaded
+                ? (state as MetaAiLoaded).aiMode
+                : state is MetaAiError
+                ? (state as MetaAiError).aiMode
+                : state is MetaAiSyncing
+                ? (state as MetaAiSyncing).aiMode
+                : state is MetaAiConnectivityChanged
+                ? (state as MetaAiConnectivityChanged).aiMode
+                : 'friend',
+      ),
+    );
 
     if (!wasConnected && event.isConnected) {
       add(const SyncWithServer());
@@ -104,27 +113,40 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
     }
   }
 
-  Future<void> _onInitializeMetaAi(InitializeMetaAi event, Emitter<MetaAiState> emit) async {
-    emit(MetaAiLoading(
-      isConnected: state is MetaAiConnectivityChanged
-          ? (state as MetaAiConnectivityChanged).isConnected
-          : state is MetaAiLoaded
-          ? (state as MetaAiLoaded).isConnected
-          : state is MetaAiError
-          ? (state as MetaAiError).isConnected
-          : state is MetaAiSyncing
-          ? (state as MetaAiSyncing).isConnected
-          : true,
-    ));
+  Future<void> _onInitializeMetaAi(
+    InitializeMetaAi event,
+    Emitter<MetaAiState> emit,
+  ) async {
+    emit(
+      MetaAiLoading(
+        isConnected:
+            state is MetaAiConnectivityChanged
+                ? (state as MetaAiConnectivityChanged).isConnected
+                : state is MetaAiLoaded
+                ? (state as MetaAiLoaded).isConnected
+                : state is MetaAiError
+                ? (state as MetaAiError).isConnected
+                : state is MetaAiSyncing
+                ? (state as MetaAiSyncing).isConnected
+                : true,
+      ),
+    );
 
     try {
       final localConversations = await MetaAiServiceHive.getConversations();
-      emit(MetaAiLoaded(
-        conversations: localConversations,
-        isConnected: state is MetaAiLoading ? (state as MetaAiLoading).isConnected : true,
-      ));
+      emit(
+        MetaAiLoaded(
+          conversations: localConversations,
+          isConnected:
+              state is MetaAiLoading
+                  ? (state as MetaAiLoading).isConnected
+                  : true,
+        ),
+      );
 
-      if (localConversations.isNotEmpty && (state is MetaAiLoaded && (state as MetaAiLoaded).currentConversationId == null)) {
+      if (localConversations.isNotEmpty &&
+          (state is MetaAiLoaded &&
+              (state as MetaAiLoaded).currentConversationId == null)) {
         add(LoadConversation(localConversations.first['id']));
       }
 
@@ -133,14 +155,22 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
         add(const SyncWithServer());
       }
     } catch (e) {
-      emit(MetaAiError(
-        error: 'Không tải được danh sách trò chuyện.',
-        isConnected: state is MetaAiLoading ? (state as MetaAiLoading).isConnected : true,
-      ));
+      emit(
+        MetaAiError(
+          error: 'Không tải được danh sách trò chuyện.',
+          isConnected:
+              state is MetaAiLoading
+                  ? (state as MetaAiLoading).isConnected
+                  : true,
+        ),
+      );
     }
   }
 
-  Future<void> _onSyncWithServer(SyncWithServer event, Emitter<MetaAiState> emit) async {
+  Future<void> _onSyncWithServer(
+    SyncWithServer event,
+    Emitter<MetaAiState> emit,
+  ) async {
     bool isConnected = true;
     List<Map<String, dynamic>> currentConversations = const [];
     List<Map<String, String>> currentMessages = const [];
@@ -169,31 +199,37 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       isConnected = (state as MetaAiConnectivityChanged).isConnected;
       currentConversations = (state as MetaAiConnectivityChanged).conversations;
       currentMessages = (state as MetaAiConnectivityChanged).messages;
-      currentConversationId = (state as MetaAiConnectivityChanged).currentConversationId;
+      currentConversationId =
+          (state as MetaAiConnectivityChanged).currentConversationId;
       aiMode = (state as MetaAiConnectivityChanged).aiMode;
     }
 
     if (state is MetaAiSyncing || !isConnected) return;
 
-    emit(MetaAiSyncing(
-      conversations: currentConversations,
-      messages: currentMessages,
-      currentConversationId: currentConversationId,
-      aiMode: aiMode,
-      isConnected: isConnected,
-    ));
+    emit(
+      MetaAiSyncing(
+        conversations: currentConversations,
+        messages: currentMessages,
+        currentConversationId: currentConversationId,
+        aiMode: aiMode,
+        isConnected: isConnected,
+      ),
+    );
 
     try {
       final user = await AuthService.getCurrentUser();
-      _userId = user?.$id ?? '';
+      _userId = user?.uid ?? '';
       final serverConversations = await AIService.getConversations(_userId!);
-      final mappedConversations = serverConversations
-          .map((doc) => {
-        'id': doc.$id,
-        'aiMode': doc.data['aiType'] as String,
-        'createdAt': doc.data['createdAt'] as String,
-      })
-          .toList();
+      final mappedConversations =
+          serverConversations
+              .map(
+                (doc) => {
+                  'id': doc['conversationId'] ?? doc['id'],
+                  'aiMode': doc['aiType'] as String,
+                  'createdAt': doc['createdAt'] as String,
+                },
+              )
+              .toList();
 
       await MetaAiServiceHive.saveConversations(mappedConversations);
       await MetaAiServiceHive.saveLastSyncTimestamp();
@@ -204,13 +240,15 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
         await MetaAiServiceHive.saveMessages(conv['id']!, sortedMessages);
       }
 
-      emit(MetaAiLoaded(
-        conversations: mappedConversations,
-        messages: currentMessages,
-        currentConversationId: currentConversationId,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
+      emit(
+        MetaAiLoaded(
+          conversations: mappedConversations,
+          messages: currentMessages,
+          currentConversationId: currentConversationId,
+          aiMode: aiMode,
+          isConnected: isConnected,
+        ),
+      );
 
       if (mappedConversations.isNotEmpty && currentConversationId == null) {
         add(LoadConversation(mappedConversations.first['id']!));
@@ -236,28 +274,35 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       }
       await MetaAiServiceHive.clearOfflineActions();
     } catch (e) {
-      emit(MetaAiError(
-        error: 'Không đồng bộ được với server.',
-        conversations: currentConversations,
-        messages: currentMessages,
-        currentConversationId: currentConversationId,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
-    } finally {
-      if (state is MetaAiSyncing) {
-        emit(MetaAiLoaded(
+      emit(
+        MetaAiError(
+          error: 'Không đồng bộ được với server.',
           conversations: currentConversations,
           messages: currentMessages,
           currentConversationId: currentConversationId,
           aiMode: aiMode,
           isConnected: isConnected,
-        ));
+        ),
+      );
+    } finally {
+      if (state is MetaAiSyncing) {
+        emit(
+          MetaAiLoaded(
+            conversations: currentConversations,
+            messages: currentMessages,
+            currentConversationId: currentConversationId,
+            aiMode: aiMode,
+            isConnected: isConnected,
+          ),
+        );
       }
     }
   }
 
-  Future<void> _onCreateConversation(CreateConversation event, Emitter<MetaAiState> emit) async {
+  Future<void> _onCreateConversation(
+    CreateConversation event,
+    Emitter<MetaAiState> emit,
+  ) async {
     bool isConnected = true;
     List<Map<String, dynamic>> currentConversations = const [];
     List<Map<String, String>> currentMessages = const [];
@@ -286,14 +331,18 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       isConnected = (state as MetaAiConnectivityChanged).isConnected;
       currentConversations = (state as MetaAiConnectivityChanged).conversations;
       currentMessages = (state as MetaAiConnectivityChanged).messages;
-      currentConversationId = (state as MetaAiConnectivityChanged).currentConversationId;
+      currentConversationId =
+          (state as MetaAiConnectivityChanged).currentConversationId;
       aiMode = (state as MetaAiConnectivityChanged).aiMode;
     }
 
     try {
       String conversationId;
       if (isConnected && _userId != null) {
-        conversationId = await AIService.createConversation(userId: _userId!, aiType: event.aiMode);
+        conversationId = await AIService.createConversation(
+          userId: _userId!,
+          aiType: event.aiMode,
+        );
       } else {
         conversationId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
         await MetaAiServiceHive.queueOfflineAction({
@@ -310,30 +359,36 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
         'createdAt': DateTime.now().toIso8601String(),
       };
 
-      final conversations = List<Map<String, dynamic>>.from(currentConversations)..add(newConversation);
+      final conversations = List<Map<String, dynamic>>.from(
+        currentConversations,
+      )..add(newConversation);
       await MetaAiServiceHive.saveConversations(conversations);
 
-      emit(MetaAiLoaded(
-        conversations: conversations,
-        messages: [],
-        currentConversationId: conversationId,
-        aiMode: event.aiMode,
-        isConnected: isConnected,
-      ));
+      emit(
+        MetaAiLoaded(
+          conversations: conversations,
+          messages: [],
+          currentConversationId: conversationId,
+          aiMode: event.aiMode,
+          isConnected: isConnected,
+        ),
+      );
 
       if (!_greetingSentConversations.contains(conversationId)) {
-        final greeting = AIConfig.aiGreetings[event.aiMode] ?? 'Xin chào! Tôi có thể giúp gì cho bạn hôm nay?';
+        final greeting =
+            AIConfig.aiGreetings[event.aiMode] ??
+            'Xin chào! Tôi có thể giúp gì cho bạn hôm nay?';
         final timestamp = _formatTimestamp(DateTime.now());
         final updatedMessages = List<Map<String, String>>.from([])
-          ..add({
-            'role': 'ai',
-            'content': greeting,
-            'timestamp': timestamp,
-          });
+          ..add({'role': 'ai', 'content': greeting, 'timestamp': timestamp});
         await MetaAiServiceHive.saveMessages(conversationId, updatedMessages);
 
         if (isConnected && _userId != null) {
-          await AIService.addMessage(conversationId: conversationId, role: 'ai', content: greeting);
+          await AIService.addMessage(
+            conversationId: conversationId,
+            role: 'ai',
+            content: greeting,
+          );
         } else {
           await MetaAiServiceHive.queueOfflineAction({
             'type': 'add_message',
@@ -343,29 +398,36 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
           });
         }
 
-        emit(MetaAiLoaded(
-          conversations: conversations,
-          messages: updatedMessages,
-          currentConversationId: conversationId,
-          aiMode: event.aiMode,
-          isConnected: isConnected,
-        ));
+        emit(
+          MetaAiLoaded(
+            conversations: conversations,
+            messages: updatedMessages,
+            currentConversationId: conversationId,
+            aiMode: event.aiMode,
+            isConnected: isConnected,
+          ),
+        );
         _greetingSentConversations.add(conversationId);
         _scrollToBottom();
       }
     } catch (e) {
-      emit(MetaAiError(
-        error: 'Không tạo được cuộc trò chuyện.',
-        conversations: currentConversations,
-        messages: currentMessages,
-        currentConversationId: currentConversationId,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
+      emit(
+        MetaAiError(
+          error: 'Không tạo được cuộc trò chuyện.',
+          conversations: currentConversations,
+          messages: currentMessages,
+          currentConversationId: currentConversationId,
+          aiMode: aiMode,
+          isConnected: isConnected,
+        ),
+      );
     }
   }
 
-  Future<void> _onLoadConversation(LoadConversation event, Emitter<MetaAiState> emit) async {
+  Future<void> _onLoadConversation(
+    LoadConversation event,
+    Emitter<MetaAiState> emit,
+  ) async {
     bool isConnected = true;
     List<Map<String, dynamic>> currentConversations = const [];
     String aiMode = 'friend';
@@ -389,43 +451,61 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
     }
 
     try {
-      final messages = await MetaAiServiceHive.getMessages(event.conversationId);
-      final conversation = currentConversations.firstWhere((conv) => conv['id'] == event.conversationId);
-      emit(MetaAiLoaded(
-        conversations: currentConversations,
-        messages: messages,
-        currentConversationId: event.conversationId,
-        aiMode: conversation['aiMode'] as String,
-        isConnected: isConnected,
-      ));
-      _scrollToBottom();
-
-      if (isConnected && await MetaAiServiceHive.isDataStale()) {
-        final serverMessages = await AIService.getConversationHistory(event.conversationId);
-        final sortedMessages = serverMessages.reversed.toList();
-        await MetaAiServiceHive.saveMessages(event.conversationId, sortedMessages);
-        emit(MetaAiLoaded(
+      final messages = await MetaAiServiceHive.getMessages(
+        event.conversationId,
+      );
+      final conversation = currentConversations.firstWhere(
+        (conv) => conv['id'] == event.conversationId,
+      );
+      emit(
+        MetaAiLoaded(
           conversations: currentConversations,
-          messages: sortedMessages,
+          messages: messages,
           currentConversationId: event.conversationId,
           aiMode: conversation['aiMode'] as String,
           isConnected: isConnected,
-        ));
+        ),
+      );
+      _scrollToBottom();
+
+      if (isConnected && await MetaAiServiceHive.isDataStale()) {
+        final serverMessages = await AIService.getConversationHistory(
+          event.conversationId,
+        );
+        final sortedMessages = serverMessages.reversed.toList();
+        await MetaAiServiceHive.saveMessages(
+          event.conversationId,
+          sortedMessages,
+        );
+        emit(
+          MetaAiLoaded(
+            conversations: currentConversations,
+            messages: sortedMessages,
+            currentConversationId: event.conversationId,
+            aiMode: conversation['aiMode'] as String,
+            isConnected: isConnected,
+          ),
+        );
         _scrollToBottom();
       }
     } catch (e) {
-      emit(MetaAiError(
-        error: 'Không tải được cuộc trò chuyện.',
-        conversations: currentConversations,
-        messages: const [],
-        currentConversationId: null,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
+      emit(
+        MetaAiError(
+          error: 'Không tải được cuộc trò chuyện.',
+          conversations: currentConversations,
+          messages: const [],
+          currentConversationId: null,
+          aiMode: aiMode,
+          isConnected: isConnected,
+        ),
+      );
     }
   }
 
-  Future<void> _onSendMessage(SendMessage event, Emitter<MetaAiState> emit) async {
+  Future<void> _onSendMessage(
+    SendMessage event,
+    Emitter<MetaAiState> emit,
+  ) async {
     if (event.message.isEmpty) return;
 
     bool isConnected = true;
@@ -456,7 +536,8 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       isConnected = (state as MetaAiConnectivityChanged).isConnected;
       currentConversations = (state as MetaAiConnectivityChanged).conversations;
       currentMessages = (state as MetaAiConnectivityChanged).messages;
-      currentConversationId = (state as MetaAiConnectivityChanged).currentConversationId;
+      currentConversationId =
+          (state as MetaAiConnectivityChanged).currentConversationId;
       aiMode = (state as MetaAiConnectivityChanged).aiMode;
     }
 
@@ -464,20 +545,21 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
 
     final timestamp = _formatTimestamp(DateTime.now());
     final updatedMessages = List<Map<String, String>>.from(currentMessages)
-      ..add({
-        'role': 'user',
-        'content': event.message,
-        'timestamp': timestamp,
-      });
-    await MetaAiServiceHive.saveMessages(currentConversationId, updatedMessages);
+      ..add({'role': 'user', 'content': event.message, 'timestamp': timestamp});
+    await MetaAiServiceHive.saveMessages(
+      currentConversationId,
+      updatedMessages,
+    );
 
-    emit(MetaAiLoaded(
-      conversations: currentConversations,
-      messages: updatedMessages,
-      currentConversationId: currentConversationId,
-      aiMode: aiMode,
-      isConnected: isConnected,
-    ));
+    emit(
+      MetaAiLoaded(
+        conversations: currentConversations,
+        messages: updatedMessages,
+        currentConversationId: currentConversationId,
+        aiMode: aiMode,
+        isConnected: isConnected,
+      ),
+    );
     messageController.clear();
     _scrollToBottom();
 
@@ -497,12 +579,10 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
         });
       }
 
-      final history = updatedMessages
-          .map((msg) => {
-        'role': msg['role']!,
-        'content': msg['content']!,
-      })
-          .toList();
+      final history =
+          updatedMessages
+              .map((msg) => {'role': msg['role']!, 'content': msg['content']!})
+              .toList();
       final modePrompts = AIConfig.aiPrompts;
       final enhancedPrompt = """
       ${event.message}
@@ -512,24 +592,29 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
 
       Map<String, dynamic> responseData;
       if (isConnected) {
-        responseData = await AIService.callMetaAIFunction(history, AIConfig.maxTokens);
+        responseData = await AIService.callMetaAIFunction(
+          history,
+          AIConfig.maxTokens,
+        );
       } else {
         responseData = {
           'ok': false,
-          'error': 'Bạn đang offline. Tin nhắn sẽ được đồng bộ khi có mạng.'
+          'error': 'Bạn đang offline. Tin nhắn sẽ được đồng bộ khi có mạng.',
         };
       }
 
       if (responseData['ok'] == true) {
-        final aiResponse = responseData['completion']?.toString() ?? 'Sorry, I cannot respond.';
+        final aiResponse =
+            responseData['completion']?.toString() ??
+            'Sorry, I cannot respond.';
         final aiTimestamp = _formatTimestamp(DateTime.now());
-        final updatedMessagesWithAi = List<Map<String, String>>.from(updatedMessages)
-          ..add({
-            'role': 'ai',
-            'content': aiResponse,
-            'timestamp': aiTimestamp,
-          });
-        await MetaAiServiceHive.saveMessages(currentConversationId, updatedMessagesWithAi);
+        final updatedMessagesWithAi = List<Map<String, String>>.from(
+          updatedMessages,
+        )..add({'role': 'ai', 'content': aiResponse, 'timestamp': aiTimestamp});
+        await MetaAiServiceHive.saveMessages(
+          currentConversationId,
+          updatedMessagesWithAi,
+        );
 
         if (isConnected && _userId != null) {
           await AIService.addMessage(
@@ -546,43 +631,55 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
           });
         }
 
-        emit(MetaAiLoaded(
-          conversations: currentConversations,
-          messages: updatedMessagesWithAi,
-          currentConversationId: currentConversationId,
-          aiMode: aiMode,
-          isConnected: isConnected,
-        ));
+        emit(
+          MetaAiLoaded(
+            conversations: currentConversations,
+            messages: updatedMessagesWithAi,
+            currentConversationId: currentConversationId,
+            aiMode: aiMode,
+            isConnected: isConnected,
+          ),
+        );
         _scrollToBottom();
       } else {
         throw Exception(responseData['error'] ?? 'Unknown AI error.');
       }
     } catch (e) {
-      final errorMsg = e is SocketException
-          ? 'Mất kết nối mạng'
-          : e is TimeoutException
-          ? 'Yêu cầu hết thời gian'
-          : e.toString();
-      final updatedMessagesWithError = List<Map<String, String>>.from(updatedMessages)
-        ..add({
-          'role': 'ai',
-          'content': errorMsg,
-          'timestamp': _formatTimestamp(DateTime.now()),
-        });
-      await MetaAiServiceHive.saveMessages(currentConversationId, updatedMessagesWithError);
-      emit(MetaAiError(
-        error: errorMsg,
-        conversations: currentConversations,
-        messages: updatedMessagesWithError,
-        currentConversationId: currentConversationId,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
+      final errorMsg =
+          e is SocketException
+              ? 'Mất kết nối mạng'
+              : e is TimeoutException
+              ? 'Yêu cầu hết thời gian'
+              : e.toString();
+      final updatedMessagesWithError = List<Map<String, String>>.from(
+        updatedMessages,
+      )..add({
+        'role': 'ai',
+        'content': errorMsg,
+        'timestamp': _formatTimestamp(DateTime.now()),
+      });
+      await MetaAiServiceHive.saveMessages(
+        currentConversationId,
+        updatedMessagesWithError,
+      );
+      emit(
+        MetaAiError(
+          error: errorMsg,
+          conversations: currentConversations,
+          messages: updatedMessagesWithError,
+          currentConversationId: currentConversationId,
+          aiMode: aiMode,
+          isConnected: isConnected,
+        ),
+      );
       _scrollToBottom();
     }
   }
 
-  Future<void> _onDeleteConversation(DeleteConversation event, Emitter<MetaAiState> emit) async {
+  Future<void> _onDeleteConversation(
+    DeleteConversation event,
+    Emitter<MetaAiState> emit,
+  ) async {
     bool isConnected = true;
     List<Map<String, dynamic>> currentConversations = const [];
     List<Map<String, String>> currentMessages = const [];
@@ -611,7 +708,8 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       isConnected = (state as MetaAiConnectivityChanged).isConnected;
       currentConversations = (state as MetaAiConnectivityChanged).conversations;
       currentMessages = (state as MetaAiConnectivityChanged).messages;
-      currentConversationId = (state as MetaAiConnectivityChanged).currentConversationId;
+      currentConversationId =
+          (state as MetaAiConnectivityChanged).currentConversationId;
       aiMode = (state as MetaAiConnectivityChanged).aiMode;
     }
 
@@ -626,15 +724,18 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
       }
       await MetaAiServiceHive.deleteConversation(event.conversationId);
 
-      final updatedConversations = List<Map<String, dynamic>>.from(currentConversations)
-        ..removeWhere((conv) => conv['id'] == event.conversationId);
-      emit(MetaAiLoaded(
-        conversations: updatedConversations,
-        messages: [],
-        currentConversationId: null,
-        aiMode: 'friend',
-        isConnected: isConnected,
-      ));
+      final updatedConversations = List<Map<String, dynamic>>.from(
+        currentConversations,
+      )..removeWhere((conv) => conv['id'] == event.conversationId);
+      emit(
+        MetaAiLoaded(
+          conversations: updatedConversations,
+          messages: [],
+          currentConversationId: null,
+          aiMode: 'friend',
+          isConnected: isConnected,
+        ),
+      );
 
       _greetingSentConversations.remove(event.conversationId);
 
@@ -642,14 +743,16 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
         add(LoadConversation(updatedConversations.first['id']));
       }
     } catch (e) {
-      emit(MetaAiError(
-        error: 'Không xóa được cuộc trò chuyện.',
-        conversations: currentConversations,
-        messages: currentMessages,
-        currentConversationId: currentConversationId,
-        aiMode: aiMode,
-        isConnected: isConnected,
-      ));
+      emit(
+        MetaAiError(
+          error: 'Không xóa được cuộc trò chuyện.',
+          conversations: currentConversations,
+          messages: currentMessages,
+          currentConversationId: currentConversationId,
+          aiMode: aiMode,
+          isConnected: isConnected,
+        ),
+      );
     }
   }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
 
-import '../../features/chat/model/user.dart';
 import 'auth_service.dart';
 
 class HiveService {

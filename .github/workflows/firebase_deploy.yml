@@ -1,0 +1,65 @@
+name: Build & Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - main # Hoặc tên branch bạn muốn trigger (ví dụ: develop, master)
+
+env:
+  MAJOR_VERSION: 2
+  MINOR_VERSION: 1
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Lấy code từ GitHub về
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Cài đặt Java (Cần cho Android build)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 3. Cài đặt Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # 4. Tải các thư viện dependencies
+      - name: Get Dependencies
+        run: flutter pub get
+
+      # 5. Khôi phục file Keystore từ Secret
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      # 6. Tạo file .env từ Secret
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      # 7. Build file APK Release (Kèm biến môi trường để signing)
+      - name: Build Android Release APK
+        env:
+          ANDROID_KEYSTORE_PATH: upload-keystore.jks # Đường dẫn tương đối trong folder android/app
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release --build-name=${{ env.MAJOR_VERSION }}.${{ env.MINOR_VERSION }}.${{ github.run_number }} --build-number=${{ github.run_number }}
+
+      # 8. Upload lên Firebase App Distribution
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_CREDENTIAL_FILE_CONTENT }}
+          groups: messenger_tester
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: "New build from GitHub Actions (Commit: ${{ github.sha }})"

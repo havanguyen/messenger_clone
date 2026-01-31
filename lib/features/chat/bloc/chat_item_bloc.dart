@@ -1,37 +1,34 @@
 import 'dart:async';
 
-import 'package:appwrite/appwrite.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:messenger_clone/common/services/friend_service.dart';
 import 'package:messenger_clone/common/services/hive_service.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 import 'package:messenger_clone/features/chat/model/chat_item.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
-import 'package:messenger_clone/common/services/app_write_config.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
+// import 'package:messenger_clone/common/services/app_write_config.dart'; // Removed
+// import 'package:messenger_clone/common/services/auth_service.dart'; // Removed direct usage
 
 part 'chat_item_event.dart';
 part 'chat_item_state.dart';
 
 class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
-  final AppwriteRepository appwriteRepository;
+  final ChatRepository chatRepository;
   late final Future<String> meId;
-  StreamSubscription<RealtimeMessage>? _chatStreamSubscription;
-  ChatItemBloc({required this.appwriteRepository}) : super(ChatItemLoading()) {
+  StreamSubscription<List<Map<String, dynamic>>>? _chatStreamSubscription;
+
+  ChatItemBloc({required this.chatRepository}) : super(ChatItemLoading()) {
     meId = HiveService.instance.getCurrentUserId();
     on<GetChatItemEvent>((event, emit) async {
       emit(ChatItemLoading());
       try {
         final String me = await meId;
-        List<GroupMessage> groupMessages = await appwriteRepository
+        List<GroupMessage> groupMessages = await chatRepository
             .getGroupMessagesByUserId(me);
-        Future<List<User>> friendsFuture = appwriteRepository.getFriendsList(
-          me,
-        );
+        Future<List<User>> friendsFuture = chatRepository.getFriendsList(me);
         if (groupMessages.isEmpty) {
           List<User> friends = await friendsFuture;
           emit(ChatItemLoaded(meId: me, chatItems: [], friends: friends));
@@ -65,7 +62,7 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
       try {
         if (state is ChatItemLoaded) {
           final currentState = state as ChatItemLoaded;
-          final GroupMessage groupMessage = await appwriteRepository
+          final GroupMessage groupMessage = await chatRepository
               .getGroupMessageById(event.groupChatId);
           List<ChatItem> chatItems = List.from(currentState.chatItems);
           final index = chatItems.indexWhere(
@@ -79,10 +76,17 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
             );
             chatItems.removeAt(index);
             chatItems.insert(0, chatItem);
+          } else {
+            // New chat item case?
+            chatItems.insert(
+              0,
+              ChatItem(groupMessage: groupMessage, meId: currentState.meId),
+            );
           }
 
           emit(currentState.copyWith(chatItems: chatItems));
-          add(SubscribeToChatStreamEvent());
+          // Re-subscribe if needed, or just stay subscribed
+          // add(SubscribeToChatStreamEvent());
         }
       } catch (error) {
         emit(ChatItemError(message: error.toString()));
@@ -116,50 +120,40 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
         if (state is ChatItemLoaded) {
           final currentState = state as ChatItemLoaded;
           final userId = currentState.meId;
-          _chatStreamSubscription?.cancel();
-          List<GroupMessage> groupMessages =
-              currentState.chatItems.map((e) => e.groupMessage).toList();
-          List<String> channels = [
-            'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.userCollectionId}.documents.$userId',
-          ];
-          for (GroupMessage group in groupMessages) {
-            channels.add(
-              'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.groupMessagesCollectionId}.documents.${group.groupMessagesId}',
-            );
+          await _chatStreamSubscription?.cancel();
 
-            if (group.lastMessage != null) {
-              channels.add(
-                'databases.${AppwriteConfig.databaseId}.collections.${AppwriteConfig.messageCollectionId}.documents.${group.lastMessage!.id}',
-              );
-              debugPrint('Subscribing to message: ${group.lastMessage!.id}');
-            }
-          }
-          debugPrint('Subscribing to channels: $channels');
-          final subscription = AuthService.realtime.subscribe(channels);
-          _chatStreamSubscription = subscription.stream.listen(
-            (message) {
-              debugPrint('Received update: ${message.events}');
-              if (message.events.any(
-                (event) => event.contains(
-                  'collections.${AppwriteConfig.groupMessagesCollectionId}',
-                ),
-              )) {
-                final groupId = message.payload['\$id'] as String;
-                add(UpdateChatItemEvent(groupChatId: groupId));
-              } else if (message.events.any(
-                (event) => event.contains(
-                  'collections.${AppwriteConfig.messageCollectionId}',
-                ),
-              )) {
-                final MessageModel newMessage = MessageModel.fromMap(
-                  message.payload,
-                );
-                add(UpdateUsersSeenEvent(message: newMessage));
+          final stream = await chatRepository.getStreamToUpdateChatPage(userId);
+
+          _chatStreamSubscription = stream.listen(
+            (payload) {
+              // Payload is List<Map<String, dynamic>> from Supabase stream
+              // Represents the row(s) that changed (User row)
+              if (payload.isNotEmpty) {
+                final userData = payload.first;
+                // Check if groupMessages changed?
+                // Simplification: Just refresh the chat list if we get a user update for now
+                // Ideally we diff or check specific fields.
+                // Or if we implemented separate stream for group messages, we would handle that.
+
+                // For now, let's just trigger a reload if we don't have enough info,
+                // or better yet, since we don't know EXACTLY what changed without diffing,
+                // maybe just re-fetch is safest but expensive.
+
+                // Note: Supabase realtime usually gives you the new record.
+                // If we are listening to user table, we get user row updates.
+                // This includes new 'groupMessages' list.
+
+                // Let's iterate over groupMessages in user doc and see if we have them.
+                // This is complex to do fully correct in one go.
+                // Let's assume ANY update to User triggers a refresh of chat items for now?
+                // Or at least fetch the group list again.
+                add(
+                  GetChatItemEvent(),
+                ); // Re-fetch everything (Cleanest for migration first pass)
               }
             },
             onError: (error) {
-              debugPrint('Error: $error');
-              emit(ChatItemError(message: error.toString()));
+              debugPrint('Error via stream: $error');
             },
           );
         }

@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.messenger_clone"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.messenger_clone"
-        minSdk = 21
+        minSdkVersion(flutter.minSdkVersion.toInt())
         targetSdk = 35
         versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName

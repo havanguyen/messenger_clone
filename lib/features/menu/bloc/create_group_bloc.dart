@@ -4,20 +4,18 @@ import 'package:messenger_clone/common/services/auth_service.dart';
 import 'package:messenger_clone/common/services/common_function.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
-import 'package:messenger_clone/features/chat/data/data_sources/remote/appwrite_repository.dart';
-import 'package:messenger_clone/features/messages/data/data_sources/remote/appwrite_chat_repository.dart';
-import 'package:appwrite/models.dart' as appwrite;
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+
 part 'create_group_event.dart';
 part 'create_group_state.dart';
 
 class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
-  final AppwriteRepository _appwriteRepository;
-  final AppwriteChatRepository _chatRepository;
-  appwrite.User? _currentUser;
+  final ChatRepository _chatRepository;
+  firebase_auth.User? _currentUser;
 
-  CreateGroupBloc({AppwriteRepository? appwriteRepository})
-    : _appwriteRepository = appwriteRepository ?? AppwriteRepository(),
-      _chatRepository = AppwriteChatRepository(),
+  CreateGroupBloc({ChatRepository? chatRepository})
+    : _chatRepository = chatRepository ?? ChatRepository(),
       super(CreateGroupInitial()) {
     on<LoadFriendsEvent>(_onLoadFriends);
     on<SearchFriendsEvent>(_onSearchFriends);
@@ -46,9 +44,7 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
       _currentUser = await AuthService.getCurrentUser();
       if (_currentUser == null) throw Exception('User not logged in');
 
-      final friends = await _appwriteRepository.getFriendsList(
-        _currentUser!.$id,
-      );
+      final friends = await _chatRepository.getFriendsList(_currentUser!.uid);
       emit(
         CreateGroupLoaded(
           friends: friends,
@@ -130,7 +126,7 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
       );
       try {
         _currentUser ??= await AuthService.getCurrentUser();
-        final Set<String> allUserInvolveMeId = {_currentUser!.$id};
+        final Set<String> allUserInvolveMeId = {_currentUser!.uid};
 
         final currentState = state as CreateGroupLoaded;
         allUserInvolveMeId.addAll(currentState.selectedFriends);
@@ -142,7 +138,7 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
           userIds: allUserInvolveMeId.toList(),
           groupId: groupId,
           isGroup: true,
-          createrId: _currentUser!.$id,
+          createrId: _currentUser!.uid,
         );
 
         emit(

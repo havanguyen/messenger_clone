@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:appwrite/appwrite.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
@@ -75,26 +75,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
       password = await showDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text("Enter Password"),
-          content: TextField(
-            controller: passwordController,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: "Password"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+        builder:
+            (context) => AlertDialog(
+              title: const Text("Enter Password"),
+              content: TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: "Password"),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context, passwordController.text);
+                  },
+                  child: const Text("Confirm"),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, passwordController.text);
-              },
-              child: const Text("Confirm"),
-            ),
-          ],
-        ),
       );
 
       if (password == null || password.isEmpty) {
@@ -127,9 +128,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const LoadingDialog(
-              message: "Checking email...",
-            ),
+            builder:
+                (context) => const LoadingDialog(message: "Checking email..."),
           );
           try {
             final isRegistered = await AuthService.isEmailRegistered(_email!);
@@ -138,79 +138,86 @@ class _EditProfilePageState extends State<EditProfilePage> {
               await CustomAlertDialog.show(
                 context: context,
                 title: "Email already exists",
-                message: "This email is already registered. Please use another email.",
+                message:
+                    "This email is already registered. Please use another email.",
               );
             } else {
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) => const LoadingDialog(
-                  message: "Sending OTP...",
-                ),
+                builder:
+                    (context) => const LoadingDialog(message: "Sending OTP..."),
               );
               final otp = OTPEmailService.generateOTP();
               await OTPEmailService.sendOTPEmail(_email!, otp);
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ConfirmationCodeScreen(
-                    email: _email!,
-                    nextScreen: () => MenuPage(),
-                    action: () async {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => const LoadingDialog(
-                          message: "Updating profile...",
-                        ),
-                      );
-                      try {
-                        await UserService.updateUserProfile(
-                          userId: widget.userId,
-                          name: _name,
-                          email: _email,
-                          aboutMe: _aboutMe,
-                          photoUrl: _photoUrl,
-                        );
-                        await UserService.updateUserAuth(
-                          userId: widget.userId,
-                          name: nameChanged ? _name : null,
-                          email: emailChanged ? _email : null,
-                          password: password,
-                        );
-                        if (_selectedImage != null) {
-                          final newPhotoUrl = await UserService.updatePhotoUrl(
-                            imageFile: _selectedImage!,
-                            userId: widget.userId,
-                          );
-                          setState(() {
-                            _photoUrl = newPhotoUrl;
-                            _selectedImage = null;
-                          });
-                        }
-                      } catch (e) {
-                        if (e is AppwriteException && e.code == 401) {
-                          Navigator.of(context).pop();
-                          await CustomAlertDialog.show(
+                  builder:
+                      (context) => ConfirmationCodeScreen(
+                        email: _email!,
+                        nextScreen: () => MenuPage(),
+                        action: () async {
+                          showDialog(
                             context: context,
-                            title: "Incorrect Password",
-                            message: "The password you entered is incorrect. Please try again.",
+                            barrierDismissible: false,
+                            builder:
+                                (context) => const LoadingDialog(
+                                  message: "Updating profile...",
+                                ),
                           );
-                          // Retry the entire save process
-                          await _saveChanges();
-                          return;
-                        }
-                        rethrow;
-                      }
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => MainPage()),
+                          try {
+                            await AuthService.reauthenticate(password);
+
+                            await UserService.updateUserProfile(
+                              userId: widget.userId,
+                              name: _name,
+                              email: _email,
+                              aboutMe: _aboutMe,
+                              photoUrl: _photoUrl,
+                            );
+                            await AuthService.updateUserAuth(
+                              userId: widget.userId,
+                              name: nameChanged ? _name : null,
+                              email: emailChanged ? _email : null,
+                            );
+                            if (_selectedImage != null) {
+                              final newPhotoUrl =
+                                  await UserService.updatePhotoUrl(
+                                    imageFile: _selectedImage!,
+                                    userId: widget.userId,
+                                  );
+                              setState(() {
+                                _photoUrl = newPhotoUrl;
+                                _selectedImage = null;
+                              });
+                            }
+                          } catch (e) {
+                            if (e is FirebaseAuthException &&
+                                (e.code == 'wrong-password' ||
+                                    e.code == 'invalid-credential')) {
+                              Navigator.of(context).pop();
+                              await CustomAlertDialog.show(
+                                context: context,
+                                title: "Incorrect Password",
+                                message:
+                                    "The password you entered is incorrect. Please try again.",
+                              );
+                              // Retry the entire save process
+                              await _saveChanges();
+                              return;
+                            }
+                            rethrow;
+                          }
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => MainPage()),
                             (route) => false,
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
                 ),
-                    (route) => false,
+                (route) => false,
               );
             }
           } catch (e) {
@@ -229,11 +236,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const LoadingDialog(
-              message: "Updating profile...",
-            ),
+            builder:
+                (context) =>
+                    const LoadingDialog(message: "Updating profile..."),
           );
           try {
+            // Re-authenticate first
+            await AuthService.reauthenticate(password);
+
             await UserService.updateUserProfile(
               userId: widget.userId,
               name: _name,
@@ -241,11 +251,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
               aboutMe: _aboutMe,
               photoUrl: _photoUrl,
             );
-            await UserService.updateUserAuth(
+            // Update Firebase Auth and Sync
+            await AuthService.updateUserAuth(
               userId: widget.userId,
               name: nameChanged ? _name : null,
               email: emailChanged ? _email : null,
-              password: password,
+              // Do not update password here
             );
             if (_selectedImage != null) {
               final newPhotoUrl = await UserService.updatePhotoUrl(
@@ -258,12 +269,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
               });
             }
           } catch (e) {
-            if (e is AppwriteException && e.code == 401) {
+            if (e is FirebaseAuthException &&
+                (e.code == 'wrong-password' ||
+                    e.code == 'invalid-credential')) {
               Navigator.of(context).pop();
               await CustomAlertDialog.show(
                 context: context,
                 title: "Incorrect Password",
-                message: "The password you entered is incorrect. Please try again.",
+                message:
+                    "The password you entered is incorrect. Please try again.",
               );
               await _saveChanges();
               return;
@@ -274,15 +288,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => MainPage()),
-                (route) => false,
+            (route) => false,
           );
         } else {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const LoadingDialog(
-              message: "Updating profile...",
-            ),
+            builder:
+                (context) =>
+                    const LoadingDialog(message: "Updating profile..."),
           );
           await UserService.updateUserProfile(
             userId: widget.userId,
@@ -305,7 +319,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => MainPage()),
-                (route) => false,
+            (route) => false,
           );
         }
       } catch (e) {
@@ -367,14 +381,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     onTap: () => _showImageOptions(),
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundImage: _selectedImage != null
-                          ? FileImage(_selectedImage!)
-                          : (_photoUrl != null && _photoUrl!.startsWith('http')
-                          ? NetworkImage(_photoUrl!)
-                          : const AssetImage('assets/images/avatar.png') as ImageProvider),
-                      child: _selectedImage == null && _photoUrl == null
-                          ? const Icon(Icons.camera_alt, color: Colors.grey)
-                          : null,
+                      backgroundImage:
+                          _selectedImage != null
+                              ? FileImage(_selectedImage!)
+                              : (_photoUrl != null &&
+                                      _photoUrl!.startsWith('http')
+                                  ? NetworkImage(_photoUrl!)
+                                  : const AssetImage('assets/images/avatar.png')
+                                      as ImageProvider),
+                      child:
+                          _selectedImage == null && _photoUrl == null
+                              ? const Icon(Icons.camera_alt, color: Colors.grey)
+                              : null,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -382,7 +400,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     initialValue: _name,
                     decoration: InputDecoration(
                       labelText: 'Name',
-                      labelStyle: TextStyle(color: context.theme.textColor.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: context.theme.textColor.withOpacity(0.7),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -401,7 +421,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     initialValue: _email,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      labelStyle: TextStyle(color: context.theme.textColor.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: context.theme.textColor.withOpacity(0.7),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -412,7 +434,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
                         return 'Invalid email format';
                       }
                       return null;
@@ -423,7 +447,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     initialValue: _aboutMe,
                     decoration: InputDecoration(
                       labelText: 'About Me',
-                      labelStyle: TextStyle(color: context.theme.textColor.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: context.theme.textColor.withOpacity(0.7),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -467,7 +493,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.photo_library, color: context.theme.textColor),
+              leading: Icon(
+                Icons.photo_library,
+                color: context.theme.textColor,
+              ),
               title: TitleText(
                 "Choose from Gallery",
                 fontSize: 16,

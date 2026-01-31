@@ -1,54 +1,40 @@
 import 'dart:io';
-import 'package:appwrite/appwrite.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:messenger_clone/common/services/auth_service.dart';
-import 'package:path_provider/path_provider.dart';
-
-import 'app_write_config.dart';
-import 'network_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserService {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
-
-  static Account get account => Account(_client);
-  static Databases get databases => Databases(_client);
-  static Storage get storage => Storage(_client);
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
   static Future<List<String>> getPushTargets(String userId) async {
     try {
-      final document = await databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userCollectionId,
-        documentId: userId,
-      );
-      return List<String>.from(document.data['pushTargets'] ?? []);
-    } on AppwriteException catch (e) {
-      throw Exception('Failed to get push targets: ${e.message}');
+      final response =
+          await _supabase
+              .from('users')
+              .select('pushTargets')
+              .eq('id', userId)
+              .single();
+
+      return List<String>.from(response['pushTargets'] ?? []);
+    } catch (e) {
+      throw Exception('Failed to get push targets: $e');
     }
   }
 
   static Future<Map<String, dynamic>> fetchUserDataById(String userId) async {
-    return NetworkUtils.withNetworkCheck(() async {
-      try {
-        final userDoc = await databases.getDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.userCollectionId,
-          documentId: userId,
-        );
-        return {
-          'userName': userDoc.data['name'] as String?,
-          'photoUrl': userDoc.data['photoUrl'] as String?,
-          'userId': userDoc.$id,
-          'aboutMe': userDoc.data['aboutMe'] as String?,
-          'email': userDoc.data['email'] as String?,
-          'isActive': userDoc.data['isActive'] as bool? ?? false,
-        };
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to fetch user data: ${e.message}');
-      }
-    });
+    try {
+      final response =
+          await _supabase.from('users').select().eq('id', userId).single();
+
+      return {
+        'userName': response['name'] as String?,
+        'photoUrl': response['photoUrl'] as String?,
+        'userId': response['id'] ?? response['\$id'],
+        'aboutMe': response['aboutMe'] as String?,
+        'email': response['email'] as String?,
+        'isActive': response['isActive'] as bool? ?? false,
+      };
+    } catch (e) {
+      throw Exception('Failed to fetch user data: $e');
+    }
   }
 
   static Future<void> updateUserProfile({
@@ -59,17 +45,15 @@ class UserService {
     String? photoUrl,
   }) async {
     try {
-      await databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userCollectionId,
-        documentId: userId,
-        data: {
-          if (name != null) 'name': name,
-          if (email != null) 'email': email,
-          if (aboutMe != null) 'aboutMe': aboutMe,
-          if (photoUrl != null) 'photoUrl': photoUrl,
-        },
-      );
+      final updates = <String, dynamic>{};
+      if (name != null) updates['name'] = name;
+      if (email != null) updates['email'] = email;
+      if (aboutMe != null) updates['aboutMe'] = aboutMe;
+      if (photoUrl != null) updates['photoUrl'] = photoUrl;
+
+      if (updates.isEmpty) return;
+
+      await _supabase.from('users').update(updates).eq('id', userId);
     } catch (e) {
       throw Exception('Error updating profile: $e');
     }
@@ -82,14 +66,12 @@ class UserService {
     required String password,
   }) async {
     try {
-      if (name != null) {
-        await account.updateName(name: name);
-      }
-      if (email != null) {
-        await account.updateEmail(email: email, password: password);
-      }
-    } on AppwriteException catch (e) {
-      throw Exception('Failed to update authentication details: ${e.message}');
+      final UserAttributes attributes = UserAttributes(
+        email: email,
+        password: password,
+        data: name != null ? {'name': name} : null,
+      );
+      await _supabase.auth.updateUser(attributes);
     } catch (e) {
       throw Exception('Error updating authentication details: $e');
     }
@@ -97,14 +79,15 @@ class UserService {
 
   static Future<String?> getNameUser(String userId) async {
     try {
-      final userDoc = await databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userCollectionId,
-        documentId: userId,
-      );
-      return userDoc.data['name'] as String?;
-    } on AppwriteException catch (e) {
-      throw Exception('Failed to get user name: ${e.message}');
+      final response =
+          await _supabase
+              .from('users')
+              .select('name')
+              .eq('id', userId)
+              .single();
+      return response['name'] as String?;
+    } catch (e) {
+      throw Exception('Failed to get user name: $e');
     }
   }
 
@@ -112,62 +95,35 @@ class UserService {
     required File imageFile,
     required String userId,
   }) async {
+    return uploadAndUpdatePhoto(imageFile, userId);
+  }
+
+  static Future<String> uploadAndUpdatePhoto(
+    File imageFile,
+    String userId,
+  ) async {
     try {
-      final uploadedFile = await storage.createFile(
-        bucketId: AppwriteConfig.storageId,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(
-          path: imageFile.path,
-          filename: 'avatar.png',
-        ),
-      );
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.png';
+      final path = '$userId/$fileName';
 
-      final newPhotoUrl =
-          'https://fra.cloud.appwrite.io/v1/storage/buckets/${AppwriteConfig.storageId}/files/${uploadedFile.$id}/view?project=${AppwriteConfig.projectId}&mode=admin';
+      await _supabase.storage
+          .from('avatars')
+          .upload(
+            path,
+            imageFile,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
-      await databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userCollectionId,
-        documentId: userId,
-        data: {'photoUrl': newPhotoUrl},
-      );
+      final newPhotoUrl = _supabase.storage.from('avatars').getPublicUrl(path);
+
+      await _supabase
+          .from('users')
+          .update({'photoUrl': newPhotoUrl})
+          .eq('id', userId);
 
       return newPhotoUrl;
     } catch (e) {
-      throw Exception('Error uploading image: $e');
+      throw Exception('Error uploading photo: $e');
     }
-  }
-
-  static Future<String> uploadAndUpdatePhoto(File imageFile, String userId) async {
-    return NetworkUtils.withNetworkCheck(() async {
-      try {
-        final directory = await getTemporaryDirectory();
-        final imagePath = await imageFile.copy('${directory.path}/temp_avatar.png');
-
-        final uploadedFile = await storage.createFile(
-          bucketId: AppwriteConfig.storageId,
-          fileId: ID.unique(),
-          file: InputFile.fromPath(
-            path: imagePath.path,
-            filename: 'avatar.png',
-          ),
-        );
-
-        final newPhotoUrl = 'https://fra.cloud.appwrite.io/v1/storage/buckets/${AppwriteConfig.storageId}/files/${uploadedFile.$id}/view?project=${AppwriteConfig.projectId}&mode=admin';
-
-        await databases.updateDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.userCollectionId,
-          documentId: userId,
-          data: {'photoUrl': newPhotoUrl},
-        );
-
-        return newPhotoUrl;
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to upload and update photo: ${e.message}');
-      } catch (e) {
-        throw Exception('Error uploading photo: $e');
-      }
-    });
   }
 }

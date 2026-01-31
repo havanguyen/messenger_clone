@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
+import 'package:messenger_clone/features/chat/data/data_sources/remote/chat_repository.dart';
 import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
 import 'package:messenger_clone/features/messages/pages/messages_page.dart';
 import 'package:page_transition/page_transition.dart';
@@ -27,17 +28,16 @@ class Routes {
           settings: settings,
           child: BlocProvider(
             create:
-                (context) =>
-                    MessageBloc()..add(
-                      MessageLoadEvent(
-                        (settings.arguments is User)
-                            ? settings.arguments as User
-                            : null,
-                        (settings.arguments is GroupMessage)
-                            ? settings.arguments as GroupMessage
-                            : null,
-                      ),
-                    ),
+                (context) => MessageBloc(chatRepository: ChatRepository())..add(
+                  MessageLoadEvent(
+                    (settings.arguments is User)
+                        ? settings.arguments as User
+                        : null,
+                    (settings.arguments is GroupMessage)
+                        ? settings.arguments as GroupMessage
+                        : null,
+                  ),
+                ),
             child: pageChat,
           ),
         );

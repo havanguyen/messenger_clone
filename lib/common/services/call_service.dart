@@ -1,15 +1,9 @@
-import 'dart:convert';
-import 'package:appwrite/appwrite.dart';
-import 'package:flutter/cupertino.dart';
-import 'app_write_config.dart';
-import 'network_utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:messenger_clone/common/services/network_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CallService {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
-
-  static Functions get functions => Functions(_client);
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
   static Future<void> sendMessage({
     required List<String> userIds,
@@ -19,46 +13,33 @@ class CallService {
   }) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final payload = jsonEncode({
+        final payload = {
           'userIds': userIds,
           'callId': callId,
           'callerName': callerName,
           'callerId': callerId,
-        });
+        };
 
-        debugPrint('Chuẩn bị gửi payload đến Cloud Function: $payload');
+        debugPrint(
+          'Preparing to invoke Supabase Edge Function: sendPush with payload: $payload',
+        );
 
-        if (payload.isEmpty) {
-          throw Exception('Payload rỗng trước khi gửi');
-        }
-
-        final execution = await functions.createExecution(
-          functionId: AppwriteConfig.sendPushFunctionId,
+        final response = await _supabase.functions.invoke(
+          'sendPush',
           body: payload,
         );
 
-        debugPrint('Phản hồi từ Cloud Function: ${execution.responseBody}');
+        // Supabase functions.invoke returns FunctionResponse
+        final data = response.data;
 
-        if (execution.responseBody.isEmpty) {
-          throw Exception('Phản hồi từ Cloud Function rỗng');
+        debugPrint('Response from Edge Function: $data');
+
+        if (data == null) {
+          // Handle empty response logic if needed or just log
+          debugPrint('Edge function returned null data');
         }
-
-        final response = jsonDecode(execution.responseBody);
-        if (response is! Map<String, dynamic>) {
-          throw Exception('Phản hồi không phải JSON hợp lệ: ${execution.responseBody}');
-        }
-
-        if (!response['success']) {
-          throw Exception(response['error'] ?? 'Gửi thông báo đẩy thất bại');
-        }
-
-        debugPrint('Thông báo đẩy được gửi: ${response['messageId']}');
-      } on FormatException catch (e) {
-        throw Exception('Lỗi phân tích JSON: $e');
-      } on AppwriteException catch (e) {
-        throw Exception('Lỗi Appwrite: ${e.message}');
       } catch (e) {
-        throw Exception('Lỗi khi gửi thông báo đẩy: $e');
+        throw Exception('Error sending push notification via Supabase: $e');
       }
     });
   }

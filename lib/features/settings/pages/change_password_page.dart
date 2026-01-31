@@ -1,4 +1,4 @@
-import 'package:appwrite/appwrite.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
 import 'package:messenger_clone/common/widgets/custom_text_style.dart';
@@ -40,7 +40,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() {
       _isLengthValid = value.length >= 8 && value.length <= 50;
       _isNoUsernameValid = true;
-      _isSpecialCharValid = RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value) &&
+      _isSpecialCharValid =
+          RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value) &&
           RegExp(r'[a-z]').hasMatch(value) &&
           RegExp(r'\d').hasMatch(value);
     });
@@ -62,16 +63,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       final user = await AuthService.getCurrentUser();
       if (user == null) throw Exception("User not logged in.");
 
-      await AuthService.account.updatePassword(
-        password: newPassword,
-        oldPassword: oldPassword,
-      );
+      await AuthService.reauthenticate(oldPassword);
+      await AuthService.updateUserAuth(userId: user.uid, password: newPassword);
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const MainPage()),
-                (route) => false);
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+          (route) => false,
+        );
         await CustomAlertDialog.show(
           context: context,
           title: "Success",
@@ -83,19 +83,28 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       if (mounted) {
         Navigator.pop(context);
         setState(() {
-          _errorMessage = e is AppwriteException
-              ? e.code == 401
-              ? "The old password is incorrect. Please try again."
-              : e.code == 429
-              ? "Too many requests. Please try again later."
-              : "Error updating password: ${e.message}"
-              : "Error updating password: $e";
+          if (e is FirebaseAuthException) {
+            if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+              _errorMessage =
+                  "The old password is incorrect. Please try again.";
+            } else if (e.code == 'too-many-requests') {
+              _errorMessage = "Too many requests. Please try again later.";
+            } else {
+              _errorMessage = "Error updating password: ${e.message}";
+            }
+          } else {
+            _errorMessage = "Error updating password: $e";
+          }
         });
       }
     }
   }
 
-  InputDecoration _buildInputDecoration(String label, bool obscureText, VoidCallback onToggle) {
+  InputDecoration _buildInputDecoration(
+    String label,
+    bool obscureText,
+    VoidCallback onToggle,
+  ) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: context.theme.textColor.withOpacity(0.7)),
@@ -117,7 +126,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       appBar: AppBar(
         backgroundColor: context.theme.bg,
         elevation: 0,
-        title: const TitleText('Change Password', fontSize: 20, fontWeight: FontWeight.bold),
+        title: const TitleText(
+          'Change Password',
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: context.theme.textColor),
           onPressed: () => Navigator.pop(context),
@@ -156,11 +169,16 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       decoration: _buildInputDecoration(
                         'Old Password',
                         _obscureOldPassword,
-                            () => setState(() => _obscureOldPassword = !_obscureOldPassword),
+                        () => setState(
+                          () => _obscureOldPassword = !_obscureOldPassword,
+                        ),
                       ),
                       style: TextStyle(color: context.theme.textColor),
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your old password' : null,
+                      validator:
+                          (value) =>
+                              value == null || value.isEmpty
+                                  ? 'Please enter your old password'
+                                  : null,
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -170,16 +188,25 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       decoration: _buildInputDecoration(
                         'New Password',
                         _obscureNewPassword,
-                            () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                        () => setState(
+                          () => _obscureNewPassword = !_obscureNewPassword,
+                        ),
                       ),
                       style: TextStyle(color: context.theme.textColor),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter a new password';
-                        if (value == _oldPasswordController.text) return 'New password must be different from the old password';
-                        if (value.length < 8 || value.length > 50) return 'Password must be between 8-50 characters';
-                        if (!RegExp(r'[a-z]').hasMatch(value)) return 'Password must contain at least 1 lowercase letter';
-                        if (!RegExp(r'\d').hasMatch(value)) return 'Password must contain at least 1 number';
-                        if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                        if (value == null || value.isEmpty)
+                          return 'Please enter a new password';
+                        if (value == _oldPasswordController.text)
+                          return 'New password must be different from the old password';
+                        if (value.length < 8 || value.length > 50)
+                          return 'Password must be between 8-50 characters';
+                        if (!RegExp(r'[a-z]').hasMatch(value))
+                          return 'Password must contain at least 1 lowercase letter';
+                        if (!RegExp(r'\d').hasMatch(value))
+                          return 'Password must contain at least 1 number';
+                        if (!RegExp(
+                          r'[!@#$%^&*(),.?":{}|<>]',
+                        ).hasMatch(value)) {
                           return 'Password must contain at least 1 special character';
                         }
                         return null;
@@ -192,12 +219,18 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       decoration: _buildInputDecoration(
                         'Confirm Password',
                         _obscureConfirmPassword,
-                            () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        () => setState(
+                          () =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                        ),
                       ),
                       style: TextStyle(color: context.theme.textColor),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please confirm your password';
-                        if (value != _newPasswordController.text) return 'Passwords do not match';
+                        if (value == null || value.isEmpty)
+                          return 'Please confirm your password';
+                        if (value != _newPasswordController.text)
+                          return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -212,9 +245,16 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.theme.blue,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                child: const TitleText('Save', fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white),
+                child: const TitleText(
+                  'Save',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -231,21 +271,30 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           'Password must be between 8-50 characters',
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: _isLengthValid ? context.theme.green : context.theme.textColor.withOpacity(0.5),
+          color:
+              _isLengthValid
+                  ? context.theme.green
+                  : context.theme.textColor.withOpacity(0.5),
         ),
         const SizedBox(height: 4),
         TitleText(
           'Password must not match your phone number/username',
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: _isNoUsernameValid ? context.theme.green : context.theme.textColor.withOpacity(0.5),
+          color:
+              _isNoUsernameValid
+                  ? context.theme.green
+                  : context.theme.textColor.withOpacity(0.5),
         ),
         const SizedBox(height: 4),
         TitleText(
           'Password must contain at least 1 lowercase letter, 1 number, and 1 special character',
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          color: _isSpecialCharValid ? context.theme.green : context.theme.textColor.withOpacity(0.5),
+          color:
+              _isSpecialCharValid
+                  ? context.theme.green
+                  : context.theme.textColor.withOpacity(0.5),
         ),
       ],
     );

@@ -1,10 +1,11 @@
-import 'package:appwrite/appwrite.dart';
 import 'package:hive_flutter/adapters.dart';
-import 'package:messenger_clone/common/constants/appwrite_database_constants.dart';
+import 'package:messenger_clone/common/constants/database_constants.dart';
 import 'package:messenger_clone/common/services/common_function.dart';
 import 'package:messenger_clone/common/services/date_time_format.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
+import 'package:uuid/uuid.dart';
+
 part 'message_model.g.dart';
 
 @HiveType(typeId: 0)
@@ -39,16 +40,16 @@ class MessageModel extends HiveObject {
     this.reactions = const [],
     this.status,
     this.usersSeen = const [],
-  }) : id = id ?? ID.unique(),
+  }) : id = id ?? const Uuid().v4(),
        createdAt = createdAt ?? DateTime.now().toUtc(),
        idFrom = sender.id;
 
   Map<String, dynamic> toJson() {
     return {
       'sender': idFrom,
-      AppwriteDatabaseConstants.content: content,
-      AppwriteDatabaseConstants.type: type,
-      AppwriteDatabaseConstants.groupMessagesId: groupMessagesId,
+      DatabaseConstants.content: content,
+      DatabaseConstants.type: type,
+      DatabaseConstants.groupMessagesId: groupMessagesId,
       'reactions': CommonFunction.reactionsToString(reactions),
       'usersSeen': usersSeen.map((e) => e.id).toList(),
     };
@@ -78,13 +79,19 @@ class MessageModel extends HiveObject {
   }
 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
+    // Determine ID field (Supabase uses 'id', Appwrite uses '$id')
+    final id = map['id'] ?? map['\$id'] ?? '';
+    final createdAt = map['createdAt'] ?? map['\$createdAt'];
+
     MessageModel result = MessageModel(
-      sender: User.fromMap(map['sender'] as Map<String, dynamic>),
-      content: map[AppwriteDatabaseConstants.content] as String,
-      type: map[AppwriteDatabaseConstants.type] as String,
-      groupMessagesId: map[AppwriteDatabaseConstants.groupMessagesId] as String,
+      sender: User.fromMap(
+        map['sender'] is Map ? map['sender'] : {'id': map['sender']},
+      ), // Supabase might return ID or object
+      content: map[DatabaseConstants.content] as String? ?? '',
+      type: map[DatabaseConstants.type] as String? ?? 'text',
+      groupMessagesId: map[DatabaseConstants.groupMessagesId] as String? ?? '',
       reactions: CommonFunction.reactionsFromString(map['reactions']),
-      id: map['\$id'] as String,
+      id: id as String,
       usersSeen:
           (map['usersSeen'] as List<dynamic>?)
               ?.map((e) => User.fromMap(e as Map<String, dynamic>))
@@ -92,9 +99,14 @@ class MessageModel extends HiveObject {
           [],
     );
 
-    result.createdAt = DateTimeFormat.parseToDateTime(map['\$createdAt']);
+    result.createdAt = DateTimeFormat.parseToDateTime(createdAt);
     return result;
   }
+
+  factory MessageModel.fromJson(Map<String, dynamic> map) {
+    return MessageModel.fromMap(map);
+  }
+
   //copyWith
   MessageModel copyWith({
     String? id,

@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'package:appwrite/appwrite.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/common/extensions/custom_theme_extension.dart';
-import 'package:messenger_clone/common/services/user_service.dart';
+
+// appwrite code removed
 import 'package:messenger_clone/common/widgets/custom_text_style.dart';
 import 'package:messenger_clone/common/widgets/elements/custom_message_item.dart';
 import 'package:messenger_clone/common/widgets/elements/custom_round_avatar.dart';
@@ -13,8 +14,7 @@ import 'package:messenger_clone/features/chat/model/user.dart';
 import 'package:messenger_clone/features/messages/bloc/message_bloc.dart';
 import 'package:messenger_clone/features/messages/data/repositories/chat_repository_impl.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
-import 'package:messenger_clone/features/messages/elements/call_page.dart';
-import '../../../common/services/call_service.dart';
+
 import '../elements/custom_messages_appbar.dart';
 import '../elements/custom_messages_bottombar.dart';
 import '../pages/group_detail_page.dart';
@@ -35,8 +35,8 @@ class MessagesPage extends StatefulWidget {
 }
 
 class _MessagesPageState extends State<MessagesPage> {
-  Stream<RealtimeMessage>? chatStream;
-  Stream<RealtimeMessage>? messageStream;
+  Stream<dynamic>? chatStream;
+  Stream<dynamic>? messageStream;
   late final TextEditingController textEditingController;
   late final ChatRepositoryImpl chatRepository;
   late final ScrollController _scrollController;
@@ -132,9 +132,6 @@ class _MessagesPageState extends State<MessagesPage> {
                           groupName: state.groupMessage.groupName ?? '',
                           avatarGroupUrl: state.groupMessage.avatarGroupUrl,
                           callFunc: () async {
-                            final String userName =
-                                await UserService.getNameUser(state.meId)
-                                    as String;
                             if (state.meId.isEmpty || state.others.isEmpty) {
                               debugPrint('Lỗi: meId hoặc others rỗng');
                               return;
@@ -159,33 +156,9 @@ class _MessagesPageState extends State<MessagesPage> {
                             debugPrint(
                               'Gửi thông báo gọi với callID: $callID, participants: $participants',
                             );
-                            try {
-                              await CallService.sendMessage(
-                                userIds: participants,
-                                callId: callID,
-                                callerName: userName,
-                                callerId: state.meId,
-                              );
-                              debugPrint('Điều hướng đến CallPage');
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => CallPage(
-                                        callID: callID,
-                                        userID: state.meId,
-                                        userName: userName,
-                                      ),
-                                ),
-                              );
-                            } catch (e) {
-                              debugPrint('Lỗi khi gửi thông báo gọi: $e');
-                            }
+                            debugPrint('Voice call disabled');
                           },
                           videoCallFunc: () async {
-                            final String userName =
-                                await UserService.getNameUser(state.meId)
-                                    as String;
                             if (state.meId.isEmpty || state.others.isEmpty) {
                               debugPrint('Lỗi: meId hoặc others rỗng');
                               return;
@@ -212,28 +185,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             debugPrint(
                               'Gửi thông báo gọi video với callID: $callID, participants: $participants',
                             );
-                            try {
-                              await CallService.sendMessage(
-                                userIds: participants,
-                                callId: callID,
-                                callerName: userName,
-                                callerId: state.meId,
-                              );
-                              debugPrint('Điều hướng đến CallPage');
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => CallPage(
-                                        callID: callID,
-                                        userID: state.meId,
-                                        userName: userName,
-                                      ),
-                                ),
-                              );
-                            } catch (e) {
-                              debugPrint('Lỗi khi gửi thông báo gọi video: $e');
-                            }
+                            debugPrint('Video call disabled');
                           },
                           onTapAvatar: () {
                             final messageBloc = context.read<MessageBloc>();
@@ -255,9 +207,6 @@ class _MessagesPageState extends State<MessagesPage> {
                           isMe: false,
                           user: state.others.first,
                           callFunc: () async {
-                            final String userName =
-                                await UserService.getNameUser(state.meId)
-                                    as String;
                             if (state.meId.isEmpty || state.others.isEmpty) {
                               debugPrint('Lỗi: meId hoặc others rỗng');
                               return;
@@ -282,33 +231,9 @@ class _MessagesPageState extends State<MessagesPage> {
                             debugPrint(
                               'Gửi thông báo gọi với callID: $callID, participants: $participants',
                             );
-                            try {
-                              await CallService.sendMessage(
-                                userIds: participants,
-                                callId: callID,
-                                callerName: userName,
-                                callerId: state.meId,
-                              );
-                              debugPrint('Điều hướng đến CallPage');
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => CallPage(
-                                        callID: callID,
-                                        userID: state.meId,
-                                        userName: userName,
-                                      ),
-                                ),
-                              );
-                            } catch (e) {
-                              debugPrint('Lỗi khi gửi thông báo gọi: $e');
-                            }
+                            debugPrint('Voice call disabled');
                           },
                           videoCallFunc: () async {
-                            final String userName =
-                                await UserService.getNameUser(state.meId)
-                                    as String;
                             if (state.meId.isEmpty || state.others.isEmpty) {
                               debugPrint('Lỗi: meId hoặc others rỗng');
                               return;
@@ -335,28 +260,7 @@ class _MessagesPageState extends State<MessagesPage> {
                             debugPrint(
                               'Gửi thông báo gọi video với callID: $callID, participants: $participants',
                             );
-                            try {
-                              await CallService.sendMessage(
-                                userIds: participants,
-                                callId: callID,
-                                callerName: userName,
-                                callerId: state.meId,
-                              );
-                              debugPrint('Điều hướng đến CallPage');
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => CallPage(
-                                        callID: callID,
-                                        userID: state.meId,
-                                        userName: userName,
-                                      ),
-                                ),
-                              );
-                            } catch (e) {
-                              debugPrint('Lỗi khi gửi thông báo gọi video: $e');
-                            }
+                            debugPrint('Video call disabled');
                           },
                         ),
                 bottomNavigationBar: Padding(
@@ -389,6 +293,7 @@ class _MessagesPageState extends State<MessagesPage> {
       ),
     );
   }
+
   String hashCallID(String callID) {
     var bytes = utf8.encode(callID);
     var digest = md5.convert(bytes);

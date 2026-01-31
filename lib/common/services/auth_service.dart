@@ -1,38 +1,34 @@
-import 'dart:convert';
-
-import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart' as models;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:messenger_clone/common/services/hive_service.dart';
 import 'package:messenger_clone/common/services/store.dart';
 import 'package:messenger_clone/features/messages/data/data_sources/local/hive_chat_repository.dart';
+// import 'package:messenger_clone/features/chat/model/user.dart' as chat_model; // Use if needed
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../../features/meta_ai/data/meta_ai_message_hive.dart';
-import 'app_write_config.dart';
 import 'network_utils.dart';
 
 class AuthService {
-  static final Client _client = Client()
-      .setEndpoint(AppwriteConfig.endpoint)
-      .setProject(AppwriteConfig.projectId);
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
-  static Account get account => Account(_client);
-  static Databases get databases => Databases(_client);
-  static Realtime get realtime => Realtime(_client);
-  static Functions get functions => Functions(_client);
-  static Storage get storage => Storage(_client);
   static Future<String?> getUserIdFromEmail(String email) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final documents = await databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.userCollectionId,
-          queries: [Query.equal('email', email)],
-        );
-        if (documents.documents.isEmpty) return null;
-        return documents.documents.first.$id;
+        final response =
+            await _supabase
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+
+        if (response == null) return null;
+        // In Postgres/Supabase, id is usually matching Auth uid if set up that way,
+        // or a uuid. We assume we are using the auth uid as the id in the users table.
+        return response['id'] as String?;
       } catch (e) {
-        return null;
+        return null; // Return null on error
       }
     });
   }
@@ -43,12 +39,15 @@ class AuthService {
   ) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        await signIn(email: email, password: password);
-        final user = await account.get().timeout(const Duration(seconds: 20));
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        final userId = credential.user?.uid;
+        // We sign out immediately because this method just wants to resolve the ID
         await signOut();
-        return user.$id;
-      } on AppwriteException {
-        await signOut();
+        return userId;
+      } on FirebaseAuthException {
         return null;
       }
     });
@@ -57,12 +56,13 @@ class AuthService {
   static Future<bool> isEmailRegistered(String email) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final documents = await databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.userCollectionId,
-          queries: [Query.equal('email', email)],
-        );
-        return documents.documents.isNotEmpty;
+        final response =
+            await _supabase
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+        return response != null;
       } catch (e) {
         return false;
       }
@@ -73,22 +73,22 @@ class AuthService {
     required String userId,
     required String newPassword,
   }) async {
-    return NetworkUtils.withNetworkCheck(() async {
-      try {
-        final execution = await functions.createExecution(
-          functionId: AppwriteConfig.resetPasswordFunctionId,
-          body: jsonEncode({'userId': userId, 'newPassword': newPassword}),
-        );
-        final response = jsonDecode(execution.responseBody);
-        if (!response['success']) {
-          throw Exception(response['message'] ?? 'Unknown error');
-        }
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to reset password: ${e.message}');
-      } catch (e) {
-        throw Exception('Error resetting password: $e');
+    // Firebase handles password reset via email usually.
+    // This signature is awkward for Firebase. We should preferably use email.
+    // Ideally we fetch email from userId then send rest.
+    try {
+      final response =
+          await _supabase
+              .from('users')
+              .select('email')
+              .eq('id', userId)
+              .maybeSingle();
+      if (response != null && response['email'] != null) {
+        await _auth.sendPasswordResetEmail(email: response['email']);
       }
-    });
+    } catch (e) {
+      throw Exception("Failed to initiate password reset: $e");
+    }
   }
 
   static Future<void> updateUserAuth({
@@ -99,230 +99,204 @@ class AuthService {
   }) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
+        final user = _auth.currentUser;
+        if (user == null) throw Exception("No user logged in");
+
         if (name != null) {
-          await account.updateName(name: name);
+          await user.updateDisplayName(name);
+          await _supabase.from('users').update({'name': name}).eq('id', userId);
         }
         if (email != null) {
-          final currentUser = await account.get().timeout(
-            const Duration(seconds: 20),
-          );
-          await account.updateEmail(email: email, password: password!);
-          await databases.updateDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.userCollectionId,
-            documentId: currentUser.$id,
-            data: {'email': email},
-          );
+          await user.verifyBeforeUpdateEmail(email);
+          // Note: Updating email in DB should probably happen after verification in a real app,
+          // but for now we sync it.
+          await _supabase
+              .from('users')
+              .update({'email': email})
+              .eq('id', userId);
         }
-      } on AppwriteException catch (e) {
-        throw Exception(
-          'Failed to update authentication details: ${e.message}',
-        );
+        if (password != null) {
+          await user.updatePassword(password);
+        }
       } catch (e) {
         throw Exception('Error updating authentication details: $e');
       }
     });
   }
 
-  static Future<models.User> signUp({
+  static Future<User?> signUp({
     required String email,
     required String password,
     required String name,
   }) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final user = await account.create(
-          userId: ID.unique(),
+        final credential = await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
-          name: name,
         );
-        await _registerUser(user);
+        final user = credential.user;
+        if (user != null) {
+          await user.updateDisplayName(name);
+          await _registerUser(user, name);
+        }
         return user;
-      } on AppwriteException catch (e) {
+      } on FirebaseAuthException catch (e) {
         throw Exception('Sign up failed: ${e.message}');
       }
     });
   }
 
-  static Future<void> _registerUser(models.User user) async {
+  static Future<void> _registerUser(User user, String name) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        await databases.createDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.userCollectionId,
-          documentId: user.$id,
-          data: {
-            'email': user.email,
-            'name': user.name,
-            'pushTargets': <String>[],
-          },
-        );
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to register user: ${e.message}');
+        await _supabase.from('users').upsert({
+          'id': user.uid,
+          'email': user.email,
+          'name': name,
+          'pushTargets': [],
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        throw Exception('Failed to register user: $e');
       }
     });
   }
 
-  static Future<models.Session> signIn({
+  static Future<UserCredential> signIn({
     required String email,
     required String password,
   }) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        models.Session session = await account.createEmailPasswordSession(
+        final credential = await _auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
+
         final fcmToken = await FirebaseMessaging.instance.getToken();
-        if (fcmToken != null) {
-          final targetId = ID.unique();
-          await account.createPushTarget(
-            targetId: targetId,
-            identifier: fcmToken,
-            providerId: AppwriteConfig.fcmProjectId,
-          );
-          await Store.setTargetId(targetId);
-          final user = await account.get().timeout(const Duration(seconds: 20));
-          HiveService.instance.saveCurrentUserId(user.$id);
-          final document = await databases.getDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.userCollectionId,
-            documentId: user.$id,
-          );
-          final List<String> pushTargets = List<String>.from(
-            document.data['pushTargets'] ?? [],
-          );
-          if (!pushTargets.contains(targetId)) {
-            pushTargets.add(targetId);
-            await databases.updateDocument(
-              databaseId: AppwriteConfig.databaseId,
-              collectionId: AppwriteConfig.userCollectionId,
-              documentId: user.$id,
-              data: {'pushTargets': pushTargets},
-            );
-          }
+        if (fcmToken != null && credential.user != null) {
+          await _updatePushToken(credential.user!.uid, fcmToken);
         }
-        return session;
-      } on AppwriteException catch (e) {
+
+        if (credential.user != null) {
+          HiveService.instance.saveCurrentUserId(credential.user!.uid);
+        }
+
+        return credential;
+      } on FirebaseAuthException catch (e) {
         throw Exception('Sign in failed: ${e.message}');
       }
     });
   }
 
+  static Future<void> _updatePushToken(String userId, String token) async {
+    try {
+      final response =
+          await _supabase
+              .from('users')
+              .select('pushTargets')
+              .eq('id', userId)
+              .maybeSingle();
+      if (response != null) {
+        List<dynamic> targets = response['pushTargets'] ?? [];
+        // Cast to String list safely
+        List<String> stringTargets = targets.map((e) => e.toString()).toList();
+
+        if (!stringTargets.contains(token)) {
+          stringTargets.add(token);
+          await _supabase
+              .from('users')
+              .update({'pushTargets': stringTargets})
+              .eq('id', userId);
+          await Store.setTargetId(token);
+        }
+      }
+    } catch (e) {
+      // Ignore push token update errors
+      print("Error updating push token: $e");
+    }
+  }
+
   static Future<void> signOut() async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        String targetId = await Store.getTargetId();
-        if (targetId.isNotEmpty) {
-          String userId = await HiveService.instance.getCurrentUserId();
-          final document = await databases.getDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.userCollectionId,
-            documentId: userId,
-          );
-          await account.deletePushTarget(targetId: targetId);
-          final List<String> pushTargets = List<String>.from(
-            document.data['pushTargets'] ?? [],
-          );
-          await Store.setTargetId('');
-          pushTargets.remove(targetId);
-          await databases.updateDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.userCollectionId,
-            documentId: userId,
-            data: {'pushTargets': pushTargets},
-          );
+        String token = await Store.getTargetId();
+        String userId = await HiveService.instance.getCurrentUserId();
+
+        if (token.isNotEmpty &&
+            userId.isNotEmpty &&
+            _auth.currentUser != null) {
+          final response =
+              await _supabase
+                  .from('users')
+                  .select('pushTargets')
+                  .eq('id', userId)
+                  .maybeSingle();
+          if (response != null) {
+            List<dynamic> targets = response['pushTargets'] ?? [];
+            List<String> stringTargets =
+                targets.map((e) => e.toString()).toList();
+            stringTargets.remove(token);
+            await _supabase
+                .from('users')
+                .update({'pushTargets': stringTargets})
+                .eq('id', userId);
+          }
         }
+
+        await Store.setTargetId('');
         MetaAiServiceHive.clearAllBoxes();
         HiveService.instance.clearCurrentUserId();
         await HiveChatRepository.instance.clearAllMessages();
-        await account.deleteSession(sessionId: 'current');
-      } on AppwriteException {
-        return;
+        await _auth.signOut();
       } catch (e) {
         return;
       }
     });
   }
 
-  static Future<models.User?> getCurrentUser() async {
-    try {
-      return await account.get().timeout(const Duration(seconds: 20));
-    } on AppwriteException catch (e) {
-      if (e.code == 401) {
-        return null;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+  static Future<User?> getCurrentUser() async {
+    return _auth.currentUser;
   }
 
   static Future<String?> isLoggedIn() async {
-    try {
-      final user = await account.get().timeout(const Duration(seconds: 20));
-      return user.$id;
-    } on AppwriteException catch (e) {
-      if (e.code == 401) {
-        return null;
-      }
-      throw Exception('Error checking login status: ${e.message}');
-    } catch (e) {
-      throw Exception('Unexpected error checking login status: $e');
-    }
+    final user = _auth.currentUser;
+    return user?.uid;
   }
 
   static Future<void> deleteAccount() async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        final user = await getCurrentUser();
-        final userId = user?.$id;
+        final user = _auth.currentUser;
+        if (user == null) return;
+
+        final userId = user.uid;
         HiveService.instance.clearCurrentUserId();
         await HiveChatRepository.instance.clearAllMessages();
-        await _deleteUserDocuments(userId!);
-        await _deleteDeviceRecords(userId);
 
-        await account.updateStatus();
-      } on AppwriteException catch (e) {
-        throw Exception('Failed to delete account: ${e.message}');
+        // Delete user from Supabase
+        await _supabase.from('users').delete().eq('id', userId);
+
+        // Delete auth account
+        await user.delete();
       } catch (e) {
         throw Exception('An error occurred while deleting account: $e');
       }
     });
   }
 
-  static Future<void> _deleteUserDocuments(String userId) async {
-    try {
-      await databases.deleteDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userCollectionId,
-        documentId: userId,
-      );
-    } on AppwriteException catch (e) {
-      if (e.code != 404) {
-        throw Exception('Failed to delete user documents: ${e.message}');
-      }
-    }
-  }
+  static Future<void> reauthenticate(String password) async {
+    return NetworkUtils.withNetworkCheck(() async {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("User not logged in");
+      if (user.email == null) throw Exception("User email not found");
 
-  static Future<void> _deleteDeviceRecords(String userId) async {
-    try {
-      final deviceRecords = await databases.listDocuments(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.deviceCollectionId,
-        queries: [Query.equal('userId', userId)],
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
       );
-
-      for (final doc in deviceRecords.documents) {
-        await databases.deleteDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.deviceCollectionId,
-          documentId: doc.$id,
-        );
-      }
-    } on AppwriteException catch (e) {
-      throw Exception('Failed to delete device records: ${e.message}');
-    }
+      await user.reauthenticateWithCredential(credential);
+    });
   }
 }
