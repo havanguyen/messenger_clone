@@ -21,12 +21,6 @@ import 'package:messenger_clone/theme/theme_provider.dart';
 
 import 'firebase_options.dart';
 
-// Removed duplicate GlobalKey since it is in app.dart or duplicated logic?
-// app.dart has its own GlobalKey. main.dart line 28 has one.
-// We should remove it from main.dart to avoid conflict if not used.
-// But we can't remove line 28 easily with this replace.
-// Let's assume app.dart handles navigation key.
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
