@@ -1,14 +1,5 @@
 part of 'create_group_bloc.dart';
 
-// Assuming GroupMessage is in chat/model/group_message.dart
-// But this file effectively imports 'group_message.dart' via part of?
-// No, 'part of' files share imports of the parent file.
-// Parent `create_group_bloc.dart` IMPORTS `group_message.dart`.
-// So it SHOULD be visible.
-// Lint says undefined. Maybe because I removed it in Step 469?
-// Step 469 removed `import 'package:messenger_clone/features/chat/model/group_message.dart';`!
-// I must Re-add it to `create_group_bloc.dart`.
-
 enum CreateGroupStatus { idle, creating, success, error }
 
 abstract class CreateGroupState extends Equatable {

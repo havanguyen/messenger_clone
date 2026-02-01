@@ -1,12 +1,7 @@
-/// Message Local Data Source
-///
-/// Handles local caching of messages using Hive.
 library;
 
 import 'package:messenger_clone/features/messages/data/datasources/local/hive_chat_repository.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
-
-/// Abstract interface for message local data source
 abstract class MessageLocalDataSource {
   Future<List<MessageModel>> getCachedMessages(String groupChatId);
   Future<void> cacheMessages(String groupChatId, List<MessageModel> messages);
@@ -14,8 +9,6 @@ abstract class MessageLocalDataSource {
   Future<void> clearMessages(String groupChatId);
   Future<void> clearAllMessages();
 }
-
-/// Implementation using Hive
 class MessageLocalDataSourceImpl implements MessageLocalDataSource {
   @override
   Future<List<MessageModel>> getCachedMessages(String groupChatId) async {

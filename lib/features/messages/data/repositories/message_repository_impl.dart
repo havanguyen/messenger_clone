@@ -1,4 +1,3 @@
-/// Message Repository Implementation
 library;
 import 'package:dartz/dartz.dart';
 import 'package:messenger_clone/core/error/failure.dart';
@@ -28,23 +27,18 @@ class MessageRepositoryImpl implements MessageRepository {
     DateTime? newerThan,
   ) async {
     try {
-      // Try cache first
       final cachedMessages = await localDataSource.getCachedMessages(
         groupChatId,
       );
       if (cachedMessages.isNotEmpty && !await networkInfo.isConnected) {
         return Right(cachedMessages);
       }
-
-      // Fetch from remote
       final messages = await remoteDataSource.getMessages(
         groupChatId,
         limit,
         offset,
         newerThan,
       );
-
-      // Cache the messages
       await localDataSource.cacheMessages(groupChatId, messages);
 
       return Right(messages);

@@ -78,21 +78,12 @@ class ChatRepositoryImpl implements AbstractChatRepository {
     required String groupId,
   }) async {
     try {
-      // Logic for createrId might be needed if not passed.
-      // Assuming createrId is handled inside or passed?
-      // Abstract signature matches implementation args.
       final GroupMessage response = await chatRepository.createGroupMessages(
         groupName: groupName,
         userIds: userIds,
         avatarGroupUrl: avatarGroupUrl,
         isGroup: isGroup,
         groupId: groupId,
-        // createrId? The abstract method doesn't have it?
-        // In Appwrite impl it was passed? No, abstract method line 21 just has these args.
-        // But AppwriteChatRepository.createGroupMessages had createrId.
-        // Let's check abstract repo again. It does NOT have createrId.
-        // So we might need to fetch meId here or it is not used?
-        // Wait, createGroupMessages in Abstract definition:
         /*
             Future<Either<String, GroupMessage>> createGroupMessages({
                 String? groupName,
@@ -102,9 +93,6 @@ class ChatRepositoryImpl implements AbstractChatRepository {
                 required String groupId,
              });
             */
-        // So we don't pass createrId. ChatRepository needs it?
-        // ChatRepository.createGroupMessages({..., String? createrId})
-        // We can pass null or fetch it.
       );
 
       return Right(response);

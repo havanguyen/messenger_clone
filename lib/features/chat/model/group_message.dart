@@ -77,7 +77,6 @@ class GroupMessage {
             if (e is Map<String, dynamic>) {
               return User.fromMap(e);
             } else if (e is String) {
-              // Handle case where users are stored as just IDs
               return User.createMeUser(e);
             }
             return User.createMeUser('');

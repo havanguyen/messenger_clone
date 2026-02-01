@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
@@ -14,7 +14,6 @@ import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
 import 'package:messenger_clone/features/menu/dialog/dialog_utils.dart';
 import 'package:messenger_clone/features/menu/pages/edit_profile_page.dart';
 import 'package:messenger_clone/features/menu/pages/find_friend_page.dart';
-// import '../../../core/services/friend_service.dart'; // Removed
 import 'package:messenger_clone/features/friend/domain/repositories/friend_repository.dart';
 import 'package:messenger_clone/core/local/hive_storage.dart';
 import 'friends_request_pagee.dart';
@@ -387,7 +386,7 @@ class _MenuPageState extends State<MenuPage> {
                   color: context.theme.textColor.withOpacity(0.7),
                 ),
                 TitleText(
-                  aboutMe?.isNotEmpty == true ? aboutMe! : 'Ruby chan (>Ï‰<)',
+                  aboutMe?.isNotEmpty == true ? aboutMe! : 'Ruby chan (>ω<)',
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                   color: context.theme.textColor.withOpacity(0.7),

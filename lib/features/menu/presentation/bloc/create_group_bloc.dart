@@ -11,8 +11,6 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 part 'create_group_event.dart';
 part 'create_group_state.dart';
-
-/// CreateGroupBloc - Manages group creation state
 class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
   final GetFriendsUseCase getFriendsUseCase;
   final CreateGroupUseCase createGroupUseCase;
@@ -31,8 +29,6 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
     on<UpdateGroupNameEvent>(_onUpdateGroupName);
     on<SubmitCreateGroupEvent>(_onCreateGroup);
   }
-
-  // Unused method removed: _generateGroupName
 
   Future<void> _onLoadFriends(
     LoadFriendsEvent event,
@@ -134,7 +130,6 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
 
         final currentState = state as CreateGroupLoaded;
         allUserInvolveMeId.addAll(currentState.selectedFriends);
-        // Generate groupId logic removed as it's handled by UseCase/Repository or not needed here
         final groupMess = await createGroupUseCase(
           CreateGroupParams(
             groupName: currentState.groupName,
@@ -153,9 +148,6 @@ class CreateGroupBloc extends Bloc<CreateGroupEvent, CreateGroupState> {
             ),
           ),
         );
-
-        // Removed redundant emit block that caused type mismatch
-        // The success state is already emitted inside groupMess.fold
       } catch (e) {
         emit(CreateGroupError(e.toString()));
       }

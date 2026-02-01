@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 

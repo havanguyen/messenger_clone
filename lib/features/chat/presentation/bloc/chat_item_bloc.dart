@@ -46,16 +46,12 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
     emit(ChatItemLoading());
     try {
       final String me = await meId;
-
-      // Use UseCases instead of direct repository calls
       final chatItemsResult = await getChatItemsUseCase(
         GetChatItemsParams(userId: me),
       );
       final friendsResult = await getFriendsUseCase(
         GetFriendsParams(userId: me),
       );
-
-      // Handle results with Either pattern
       chatItemsResult.fold(
         (failure) => emit(ChatItemError(message: failure.message)),
         (chatItems) {
@@ -86,8 +82,6 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
     try {
       if (state is ChatItemLoaded) {
         final currentState = state as ChatItemLoaded;
-
-        // Use remote datasource directly for single item fetch
         if (remoteDataSource != null) {
           final groupMessage = await remoteDataSource!.getGroupMessageById(
             event.groupChatId,

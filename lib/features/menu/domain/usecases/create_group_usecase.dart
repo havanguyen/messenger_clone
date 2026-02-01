@@ -1,4 +1,3 @@
-/// Create Group UseCase
 library;
 import 'package:dartz/dartz.dart';
 import 'package:messenger_clone/core/error/failure.dart';

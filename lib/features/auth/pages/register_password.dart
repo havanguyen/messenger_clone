@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
 import 'package:messenger_clone/features/auth/pages/confirmation_code_screen.dart';
@@ -146,11 +146,8 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
 
                     result.fold(
                       (failure) async {
-                        // Failure flow
                         String errorMessage =
                             failure.message; // Assuming Failure has message
-                        // Map specific error messages if needed, though Repository usually handles it
-                        // Just showing generic error or failure message for now
                         await CustomAlertDialog.show(
                           context: context,
                           title: "Error",
@@ -158,7 +155,6 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                         );
                       },
                       (user) async {
-                        // Success flow
                         await CustomAlertDialog.show(
                           context: context,
                           title: "Success",

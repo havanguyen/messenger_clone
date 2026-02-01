@@ -1,12 +1,8 @@
-/// Chat Local Data Source
-///
-/// Handles local caching of chat data using Hive.
 library;
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:messenger_clone/features/chat/model/user.dart';
 
-/// Abstract interface for local data source
 abstract class ChatLocalDataSource {
   Future<String> getCurrentUserId();
   Future<User?> getCachedUser(String oduserId);
@@ -14,7 +10,6 @@ abstract class ChatLocalDataSource {
   Future<List<User>> getCachedUsers();
 }
 
-/// Implementation using Hive
 class ChatLocalDataSourceImpl implements ChatLocalDataSource {
   static const String _userBoxName = 'userBox';
   static const String _currentUserIdKey = 'currentUserId';

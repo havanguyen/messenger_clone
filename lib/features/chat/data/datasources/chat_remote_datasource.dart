@@ -1,7 +1,3 @@
-/// Chat Remote Data Source
-///
-/// This is the old ChatRepository renamed to serve as DataSource.
-/// It handles all remote operations with Firebase Firestore and Supabase Storage.
 library;
 
 import 'dart:io';
@@ -13,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-/// Abstract interface for remote data source
 abstract class ChatRemoteDataSource {
   Future<GroupMessage> updateGroupMessage(GroupMessage groupMessage);
   Future<void> updateChattingWithGroupMessId(
@@ -66,7 +61,6 @@ abstract class ChatRemoteDataSource {
   String getPublicUrl(String filePath);
 }
 
-/// Implementation of ChatRemoteDataSource
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   final SupabaseClient _supabase = Supabase.instance.client;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

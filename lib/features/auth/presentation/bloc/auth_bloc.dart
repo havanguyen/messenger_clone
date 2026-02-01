@@ -16,8 +16,6 @@ import 'package:messenger_clone/features/auth/domain/usecases/check_credentials_
 
 part 'auth_event.dart';
 part 'auth_state.dart';
-
-/// AuthBloc - MVVM ViewModel using UseCases
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
   final RegisterUseCase registerUseCase;

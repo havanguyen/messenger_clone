@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:messenger_clone/core/widgets/elements/video_player_preview_widget.dart';
@@ -7,8 +7,6 @@ import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc
 import 'dart:io';
 
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
-
-/// Thumbs up emoji constant using Unicode escape sequence
 const String kThumbsUpEmoji = "\u{1F44D}";
 
 class CustomMessagesBottomBar extends StatefulWidget {

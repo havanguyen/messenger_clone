@@ -1,8 +1,5 @@
-/// MetaAI Local Data Source
 library;
 import 'package:messenger_clone/features/meta_ai/data/meta_ai_message_hive.dart';
-
-/// Abstract interface for Meta AI local data source
 abstract class MetaAiLocalDataSource {
   Future<List<Map<String, dynamic>>> getLocalConversations();
   Future<void> saveConversations(List<Map<String, dynamic>> conversations);
@@ -14,8 +11,6 @@ abstract class MetaAiLocalDataSource {
   Future<void> deleteLocalConversation(String conversationId);
   Future<void> clearAllData();
 }
-
-/// Implementation using Hive
 class MetaAiLocalDataSourceImpl implements MetaAiLocalDataSource {
   @override
   Future<List<Map<String, dynamic>>> getLocalConversations() async {

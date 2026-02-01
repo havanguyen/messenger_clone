@@ -1,4 +1,4 @@
-﻿import 'package:hive_flutter/adapters.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:messenger_clone/core/constants/database_constants.dart';
 import 'package:messenger_clone/core/utils/common_utils.dart';
 import 'package:messenger_clone/core/utils/date_time_extensions.dart';
@@ -79,7 +79,6 @@ class MessageModel extends HiveObject {
   }
 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
-    // Determine ID field (Supabase uses 'id', Appwrite uses '$id')
     final id = map['id'] ?? map['\$id'] ?? '';
     final createdAt = map['createdAt'] ?? map['\$createdAt'];
 
@@ -97,7 +96,6 @@ class MessageModel extends HiveObject {
             if (e is Map<String, dynamic>) {
               return User.fromMap(e);
             } else if (e is String) {
-              // Handle case where usersSeen contains just user IDs
               return User.fromMap({'id': e});
             }
             return User.fromMap({'id': ''});
@@ -112,8 +110,6 @@ class MessageModel extends HiveObject {
   factory MessageModel.fromJson(Map<String, dynamic> map) {
     return MessageModel.fromMap(map);
   }
-
-  //copyWith
   MessageModel copyWith({
     String? id,
     User? sender,

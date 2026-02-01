@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
@@ -51,9 +51,6 @@ class _FriendRequestPageState extends State<FriendRequestPage> {
           );
           final userData = userResult.fold(
             (l) => <String, dynamic>{}, // Handle error gracefully or throw?
-            // If user fetch fails, we might just return default/unknown or skip?
-            // Existing logic threw error? existing logic: UserService threw exception.
-            // Let's return empty map and handle display.
             (r) => r,
           );
 

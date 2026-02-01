@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
@@ -254,7 +254,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     message:
                                         "The password you entered is incorrect. Please try again.",
                                   );
-                                  // Retry the entire save process
                                   await _saveChanges();
                                   return;
                                 }
@@ -298,7 +297,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const LoadingDialog(message: "Updating profile..."),
           );
           try {
-            // Re-authenticate first
             final reauthResult = await GetIt.I<AuthRepository>().reauthenticate(
               password,
             );
@@ -323,13 +321,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   (l) => throw Exception(l.message),
                   (_) => null,
                 );
-                // Update Firebase Auth and Sync
                 final updateAuthResult = await GetIt.I<AuthRepository>()
                     .updateUserAuth(
                       userId: widget.userId,
                       name: nameChanged ? _name : null,
                       email: emailChanged ? _email : null,
-                      // Do not update password here
                     );
 
                 await updateAuthResult.fold((failure) async {

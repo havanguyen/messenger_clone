@@ -1,9 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:messenger_clone/features/auth/pages/register_password.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
-
-// import '../../../core/services/auth_service.dart'; // Removed
 import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
 import 'package:messenger_clone/core/local/secure_storage.dart';
 import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';

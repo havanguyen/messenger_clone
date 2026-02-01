@@ -351,7 +351,6 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
       );
       Navigator.of(context).pop(); // Close loading dialog
       if (mounted) {
-        // Navigate back to Stories page with result
         Navigator.of(context).pop(newStory);
       }
       return newStory;

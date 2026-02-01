@@ -1,14 +1,9 @@
-/// Network connectivity checker.
 library;
 import 'package:connectivity_plus/connectivity_plus.dart';
-
-/// Abstract interface for network info
 abstract class NetworkInfo {
   Future<bool> get isConnected;
   Stream<bool> get onConnectivityChanged;
 }
-
-/// Implementation using connectivity_plus
 class NetworkInfoImpl implements NetworkInfo {
   final Connectivity connectivity;
 

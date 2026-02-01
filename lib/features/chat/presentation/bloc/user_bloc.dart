@@ -5,8 +5,6 @@ import 'package:messenger_clone/features/chat/model/user.dart';
 
 part 'user_event.dart';
 part 'user_state.dart';
-
-/// UserBloc - Refactored for Clean Architecture
 class UserBloc extends Bloc<UserEvent, UserState> {
   final ChatRemoteDataSource remoteDataSource;
 

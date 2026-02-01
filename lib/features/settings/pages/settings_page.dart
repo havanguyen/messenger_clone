@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -275,7 +275,7 @@ class _SettingsPageState extends State<SettingsPage> {
             notificationCount:
                 _devicesCount == 0
                     ? null
-                    : _devicesCount, // Hiá»ƒn thá»‹ sá»‘ lÆ°á»£ng thiáº¿t bá»‹
+                    : _devicesCount, // Hiển thị số lượng thiết bị
             onTap: () {
               Navigator.push(
                 context,

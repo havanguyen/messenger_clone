@@ -1,11 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
 import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/friend/domain/repositories/friend_repository.dart';
-// import '../../../../core/services/friend_service.dart'; // Removed
 import 'package:messenger_clone/core/local/hive_storage.dart';
 
 class ListFriendsPage extends StatefulWidget {

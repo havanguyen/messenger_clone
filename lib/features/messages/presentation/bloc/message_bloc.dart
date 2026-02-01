@@ -120,11 +120,7 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
           ),
         );
       }
-
-      // Fetch remote messages
       add(MessageLoadMoreEvent());
-
-      // Subscribe to streams
       add(SubscribeToChatStreamEvent());
       add(SubscribeToMessagesEvent());
     } catch (e) {
@@ -141,8 +137,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         final currentState = state as MessageLoaded;
         emit(currentState.copyWith(isLoadingMore: true));
         final offset = currentState.messages.length;
-
-        // Use UseCase
         final result = await loadMessagesUseCase(
           LoadMessagesParams(
             groupChatId: currentState.groupMessage.groupMessagesId,
@@ -205,8 +199,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       }
     }
   }
-
-  // ... (Other methods mostly same, replacing direct repo calls with repository interface calls)
 
   void _onSend(MessageSendEvent event, Emitter<MessageState> emit) async {
     if (state is MessageLoaded) {
@@ -356,8 +348,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       }
     }
   }
-
-  // Copied helper methods
   Future<Either<String, GroupMessage>> _getOrCreateGroupMessage(
     GroupMessage? groupMessage,
     appUser.User? otherUser,
@@ -366,8 +356,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     if (groupMessage != null) return Right(groupMessage);
     if (otherUser != null) {
       try {
-        // Use repository to create/get
-        // createGroupMessages returns Either<Failure, GroupMessage>
         final result = await chatRepository.createGroupMessages(
           userIds: [me, otherUser.id],
           groupId: 'PRIVATE_${[me, otherUser.id].join('_')}',
@@ -375,8 +363,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
           isGroup: false,
           createrId: me,
         );
-
-        // Unwrap the Either before returning
         return result.fold(
           (failure) => Left(failure.toString()),
           (group) => Right(group),
@@ -388,9 +374,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     return const Left("Invalid arguments");
   }
 
-  // ... Rest of callbacks like _onRemoveMember, _onUpdateName ...
-  // Updating them to use repository.
-
   void _onRemoveMember(
     MessageRemoveGroupMemberEvent event,
     Emitter<MessageState> emit,
@@ -399,8 +382,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     final currentState = state as MessageLoaded;
     final removedUser = event.memberToRemove;
     final me = currentState.meId;
-
-    // ... validation logic ...
 
     try {
       final List<appUser.User> updatedUser =
@@ -450,11 +431,9 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     try {
       if (state is MessageLoaded) {
         final currentState = state as MessageLoaded;
-        // ... validation ...
         GroupMessage updatedGroup = currentState.groupMessage.copyWith(
           groupName: event.newName,
         );
-        // Using repository dynamic dispatch
         final result = await (chatRepository as dynamic).updateGroupMessage(
           updatedGroup,
         );
@@ -467,7 +446,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         } else {
           updatedGroup = result;
         }
-        // ... send notification ...
         add(MessageSendEvent("Group name updated to ${event.newName}"));
 
         emit(
@@ -487,7 +465,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageUpdateGroupAvatarEvent event,
     Emitter<MessageState> emit,
   ) async {
-    // Similar implementation
     try {
       if (state is MessageLoaded) {
         final currentState = state as MessageLoaded;
@@ -522,11 +499,8 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     MessageAddGroupMemberEvent event,
     Emitter<MessageState> emit,
   ) async {
-    // Implementation... with repository
     if (state is MessageLoaded) {
       final currentState = state as MessageLoaded;
-      // Just update state with new group info passed from event?
-      // Event takes newGroupMessage
       emit(
         currentState.copyWith(
           groupMessage: event.newGroupMessage,
@@ -643,7 +617,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       try {
         final currentState = state as MessageLoaded;
         if (_chatStreamSubscription != null) return;
-        // final GroupMessage groupMessage = currentState.groupMessage; // Unused
 
         final chatStreamResult = await chatRepository.getChatStream(
           currentState.groupMessage.groupMessagesId,
@@ -653,8 +626,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
           stream,
         ) {
           _chatStreamSubscription = stream.listen((payload) {
-            // TODO: Handle chat update event, e.g. AddReceiveChatEvent(payload)
-            // Currently ReceiveMessageEvent expects List<Map>, check payload structure
           });
         });
       } catch (error) {
@@ -680,7 +651,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         final currentState = state as MessageLoaded;
         final String messageId = event.messageId;
         final String reaction = event.reaction;
-        // Optimistic UI
         final List<MessageModel> messages = List<MessageModel>.from(
           currentState.messages,
         );
@@ -702,7 +672,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     ReceiveMessageEvent event,
     Emitter<MessageState> emit,
   ) async {
-    // implementation similar to previous
     if (state is MessageLoaded) {
       try {
         final payload = event.payload;
@@ -718,38 +687,26 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
         for (final data in payload) {
           final MessageModel newMessage = MessageModel.fromMap(data);
-
-          // Check if we need to mark as seen
           _debouncedUpdateSeenStatus(newMessage);
 
           final index = messages.indexWhere((m) => m.id == newMessage.id);
           if (index != -1) {
-            // Message exists, update it
             if (messages[index] != newMessage) {
               messages[index] = newMessage;
               stateChanged = true;
             }
           } else {
-            // Message doesn't exist, add it
-            // We check if there's a temporary message that matches (fuzzy match) could be dangerous
-            // For now, we assume _onSend updates ID fast enough OR we accept a temporary duplicate until refresh
             messages.insert(0, newMessage);
             stateChanged = true;
           }
         }
-
-        // Sort messages to ensure order
         messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (stateChanged) {
-          // Update video/image controllers maps if needed (cleaning up old ones?)
-          // For simplicity, we just keep existing ones and let lazy loading handle new ones
 
           emit(
             currentState.copyWith(
               messages: messages,
-              // We don't necessarily update videoPlayers/images maps here as they are creating on demand or init
-              // but we should pass them along
             ),
           );
         }
@@ -768,11 +725,8 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
   @override
   Future<void> close() async {
-    // Cancel timer
     _seenStatusDebouncer?.cancel();
     _seenStatusDebouncer = null;
-
-    // Cancel subscriptions directly
     List<Future<void>> futureList = [];
     if (_chatStreamSubscription != null) {
       futureList.add(_chatStreamSubscription!.cancel());

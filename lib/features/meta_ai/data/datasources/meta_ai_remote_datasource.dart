@@ -1,15 +1,10 @@
-/// MetaAI Remote Data Source
 library;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// import 'package:uuid/uuid.dart'; // Uuid not used if I use document ID or existing ID logic?
-// AIService used Uuid().v4().
 import 'package:uuid/uuid.dart';
 import 'package:messenger_clone/core/network/network_utils.dart';
 import 'package:messenger_clone/core/local/hive_storage.dart';
-
-/// Abstract interface for Meta AI data source
 abstract class MetaAiRemoteDataSource {
   Future<String> sendMessage(String message, String conversationId);
   Future<String> createConversation({String? title});
@@ -19,8 +14,6 @@ abstract class MetaAiRemoteDataSource {
     String conversationId,
   );
 }
-
-/// Implementation using Firestore and Supabase
 class MetaAiRemoteDataSourceImpl implements MetaAiRemoteDataSource {
   final SupabaseClient _supabase;
   final FirebaseFirestore _firestore;
@@ -35,7 +28,6 @@ class MetaAiRemoteDataSourceImpl implements MetaAiRemoteDataSource {
   Future<String> sendMessage(String message, String conversationId) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        // 1. Invoke AI function
         final response = await _supabase.functions.invoke(
           'metaAI',
           body: {
@@ -56,24 +48,18 @@ class MetaAiRemoteDataSourceImpl implements MetaAiRemoteDataSource {
         } else {
           throw Exception('Invalid response format');
         }
-
-        // 2. Save User Message
         await _firestore.collection('ai_messages').add({
           'conversationId': conversationId,
           'role': 'user',
           'content': message,
           'timestamp': DateTime.now().toIso8601String(),
         });
-
-        // 3. Save AI Message
         await _firestore.collection('ai_messages').add({
           'conversationId': conversationId,
           'role': 'model', // Gemini/MetaAI usually uses 'model' or 'assistant'
           'content': aiResponse,
           'timestamp': DateTime.now().toIso8601String(),
         });
-
-        // 4. Update Conversation Header
         final convoQuery =
             await _firestore
                 .collection('ai_chat_history')
@@ -140,19 +126,14 @@ class MetaAiRemoteDataSourceImpl implements MetaAiRemoteDataSource {
   Future<void> deleteConversation(String conversationId) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        // Delete messages
         final messages =
             await _firestore
                 .collection('ai_messages')
                 .where('conversationId', isEqualTo: conversationId)
                 .get();
-
-        // Batch delete is better but for now iterate
         for (var doc in messages.docs) {
           await doc.reference.delete();
         }
-
-        // Delete history
         final history =
             await _firestore
                 .collection('ai_chat_history')

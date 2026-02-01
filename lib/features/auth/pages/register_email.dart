@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
 import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
-
-// import '../../../core/services/auth_service.dart'; // Removed
 import 'package:messenger_clone/core/widgets/dialog/custom_alert_dialog.dart';
 import '../../../core/widgets/dialog/loading_dialog.dart';
 import 'confirmation_code_screen.dart';
@@ -172,7 +170,6 @@ class _EmailInputScreenState extends State<EmailInputScreen> {
                       );
                     } catch (e) {
                       if (!context.mounted) return;
-                      // Navigator.of(context).pop(); // Safety pop if not handled
                       if (Navigator.canPop(context)) {
                         Navigator.of(context).pop();
                       }

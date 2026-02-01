@@ -45,8 +45,6 @@ class FriendRepositoryImpl implements FriendRepository {
 
         userResult.fold(
           (failure) {
-            // Log failure or ignore? For now skipping if user not found or error
-            // Or maybe include a partial object?
           },
           (userData) {
             friendsList.add({

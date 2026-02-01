@@ -1,4 +1,3 @@
-﻿// ignore_for_file: constant_identifier_names
 import 'package:flutter/material.dart';
 
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';

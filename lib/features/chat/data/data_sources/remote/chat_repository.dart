@@ -10,8 +10,6 @@ class ChatRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // --- Group & User Methods ---
-
   Future<GroupMessage> updateGroupMessage(GroupMessage groupMessage) async {
     try {
       await _firestore
@@ -50,12 +48,7 @@ class ChatRepository {
     final List<GroupMessage> groupMessages = [];
     try {
       if (groupMessageIds.isEmpty) return [];
-
-      // Firestore whereIn is limited to 10 items (or 30 depending on API version, safer to assume limit).
-      // For now we assume the list is small or we might need to batch.
-      // A simple loop is safer for correctness if IDs > 10.
       if (groupMessageIds.length > 10) {
-        // Fallback for large lists
         for (var id in groupMessageIds) {
           final doc =
               await _firestore.collection('group_messages').doc(id).get();
@@ -210,7 +203,6 @@ class ChatRepository {
 
   Future<List<ChatModel.User>> getFriendsList(String userId) async {
     try {
-      // Simulate join or multiple queries
       final sentFriendsSnap =
           await _firestore
               .collection('friends')
@@ -234,10 +226,7 @@ class ChatRepository {
       }
 
       if (friendIds.isEmpty) return [];
-
-      // Fetch users
       final questions = <ChatModel.User>[];
-      // Chunking if needed, but simple loop for now
       if (friendIds.length > 10) {
         for (var fid in friendIds) {
           final u = await getUserById(fid);
@@ -278,8 +267,6 @@ class ChatRepository {
     }
   }
 
-  // --- Message & Storage Methods ---
-
   Future<MessageModel> getMessageById(String messageId) async {
     try {
       final doc = await _firestore.collection('messages').doc(messageId).get();
@@ -306,9 +293,6 @@ class ChatRepository {
   Future<Stream<List<Map<String, dynamic>>>> getMessagesStream(
     List<String> messageIds,
   ) async {
-    // This method seemed to ignore messageIds in original implementation.
-    // We will return a stream of all messages (mapped) to preserve signature compatibility,
-    // but ideally this should be filtered.
     return _firestore
         .collection('messages')
         .snapshots()
@@ -337,19 +321,6 @@ class ChatRepository {
 
       query = query.orderBy('createdAt', descending: true);
 
-      // Firestore doesn't support offset well with huge numbers,
-      // but for small pagination it's okay-ish if we don not have cursor.
-      // However, typical flutter pagination uses limit.
-      // We will blindly apply limit usually.
-      // Emulating offset is hard without loading previous docs.
-      // We will ignore offset if it is 0, else we might need to skip?
-      // "limit" here might mean "per page".
-
-      // Since we don't have the last document for startAfter, strictly speaking we can't paginate correctly
-      // with just 'offset' int in Firestore efficiently.
-      // But if the app logic passes offset=0 always for first load...
-      // Let's just return limit for now.
-
       if (limit > 0) {
         query = query.limit(limit);
       }
@@ -370,15 +341,12 @@ class ChatRepository {
   ) async {
     try {
       final data = message.toJson();
-      // Ensure createdAt is present
       if (!data.containsKey('createdAt')) {
         data['createdAt'] = message.createdAt.toIso8601String();
       }
 
       final docRef = await _firestore.collection('messages').add(data);
       final messageId = docRef.id;
-
-      // Update group with last message
       await _firestore
           .collection('group_messages')
           .doc(groupMessage.groupMessagesId)
@@ -483,7 +451,6 @@ class ChatRepository {
     try {
       return _supabase.storage.from('chat_media').getPublicUrl(filePath);
     } catch (e) {
-      // If fail, return path or empty?
       return filePath;
     }
   }

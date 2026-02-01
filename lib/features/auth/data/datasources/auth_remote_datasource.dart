@@ -1,14 +1,9 @@
-/// Auth Remote Data Source
-///
-/// Handles Firebase Authentication and Firestore operations for auth.
 library;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:messenger_clone/core/network/network_utils.dart';
-
-/// Abstract interface for auth remote data source
 abstract class AuthRemoteDataSource {
   Future<String?> getUserIdFromEmail(String email);
   Future<String?> getUserIdFromEmailAndPassword(String email, String password);
@@ -40,8 +35,6 @@ abstract class AuthRemoteDataSource {
   Future<String?> getFcmToken();
   Future<void> updatePushToken(String userId, String token);
 }
-
-/// Implementation using Firebase
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

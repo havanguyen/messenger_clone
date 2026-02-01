@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 import 'package:messenger_clone/core/widgets/dialog/loading_dialog.dart';
@@ -11,7 +11,7 @@ class DialogUtils {
     required String title,
     required String message,
     String confirmText = 'OK',
-    String cancelText = 'Há»§y',
+    String cancelText = 'Hủy',
   }) async {
     return await showDialog<bool>(
           context: context,
@@ -80,15 +80,15 @@ class DialogUtils {
       Navigator.of(context).pop();
       String detailedError = errorMessage;
       if (e.toString().contains('network')) {
-        detailedError = 'Lá»—i káº¿t ná»‘i máº¡ng. Vui lÃ²ng kiá»ƒm tra káº¿t ná»‘i cá»§a báº¡n.';
+        detailedError = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối của bạn.';
       } else if (e.toString().contains('unauthorized')) {
-        detailedError = 'PhiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.';
+        detailedError = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
       }
       await showConfirmationDialog(
         context: context,
-        title: 'Lá»—i',
+        title: 'Lỗi',
         message: detailedError,
-        confirmText: 'ÄÃ³ng',
+        confirmText: 'Đóng',
       );
     }
   }

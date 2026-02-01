@@ -1,7 +1,3 @@
-/// Chat Repository Implementation
-///
-/// Implements the abstract ChatRepository interface from domain layer.
-/// Coordinates between remote and local data sources.
 library;
 
 import 'package:dartz/dartz.dart';

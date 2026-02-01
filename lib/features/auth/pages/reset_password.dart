@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
 
@@ -110,9 +110,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       );
     } catch (e) {
       if (!context.mounted) return;
-      // Close dialog if still open (though we handled it above in most cases, but safety)
-      // Navigator.of(context).pop(); // Might pop wrong thing if handled above.
-      // Better to rely on folds popping. But 'catch' catches unexpected errors.
       if (Navigator.canPop(context)) Navigator.of(context).pop();
 
       await CustomAlertDialog.show(

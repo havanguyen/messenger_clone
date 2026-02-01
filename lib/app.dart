@@ -36,12 +36,9 @@ class MessengerClone extends StatelessWidget {
           return MaterialApp(
             navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
-            // Assuming ThemeProvider exposes ValueNotifier or similar.
-            // Previous main.dart used: themeMode: themeProvider.themeNotifier.value
             themeMode: themeProvider.themeNotifier.value,
             onGenerateRoute: AppRouter.onGenerateRoute,
             initialRoute: AppRouter.welcome,
-            // home: const SplashPage(), // Removed to avoid conflict with initialRoute
             theme: lightTheme,
             darkTheme: darkTheme,
           );

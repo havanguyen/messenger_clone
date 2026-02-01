@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
@@ -90,7 +90,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    // Group Avatar
                     GestureDetector(
                       onTap: _pickImage,
                       child: Stack(
@@ -120,7 +119,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Group Name
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: TextField(
@@ -141,7 +139,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Members List
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Column(
@@ -269,7 +266,6 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                         ],
                       ),
                     ),
-                    // Add Member Button
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: ElevatedButton(

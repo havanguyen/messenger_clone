@@ -1,4 +1,3 @@
-/// Use case to update chat item (group message).
 library;
 import 'package:dartz/dartz.dart';
 import 'package:messenger_clone/core/error/failure.dart';

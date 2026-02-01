@@ -269,15 +269,6 @@ class NotificationService {
     }
 
     try {
-      // Assuming getGroupMessageById logic exists in ChatRepository or can be emulated.
-      // Since ChatRepository might not have getGroupMessageById, we might need to find it by ID from supabase
-      // For now, let's assume ChatRepository has it or we query Supabase directly.
-      // But ChatRepository is cleaner. Let's use ChatRepository.
-      // If ChatRepository doesn't have it, I'll use Supabase.
-      // Let's use Supabase directly for simplicity here or add method to Repo.
-      // Actually, let's use the repo if possible.
-      // Waiting for repo update in previous steps... I didn't add getGroupMessageById to ChatRepository.
-      // I'll implement it inline here using Supabase for now to avoid changing Repo.
 
       final supabase = Supabase.instance.client;
       final response =
@@ -286,9 +277,6 @@ class NotificationService {
               .select()
               .eq('id', payload['groupMessageId'])
               .single();
-
-      // Ensure GroupMessage.fromMap matches what Supabase returns (json).
-      // If fromMap expects id in top level, it works.
       GroupMessage groupMessage = GroupMessage.fromJson(response);
 
       navigatorKey!.currentState!.pushNamed(

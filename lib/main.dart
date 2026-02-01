@@ -3,15 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:messenger_clone/core/di/injection.dart' as di;
-
-// Features - Chat
 import 'package:messenger_clone/features/chat/model/user.dart' as app_user;
-
-// Features - Messages
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
-
-// Features - Meta AI
 import 'features/meta_ai/data/meta_ai_message_model.dart';
 
 import 'package:messenger_clone/app.dart';
@@ -23,20 +17,12 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load .env
   await dotenv.load(fileName: ".env");
-
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Initialize Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-
-  // Initialize Dependency Injection
   await di.init();
 
   await Hive.initFlutter();

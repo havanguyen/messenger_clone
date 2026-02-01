@@ -7,8 +7,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
 import 'package:flutter/foundation.dart';
-
-/// Abstract interface for message remote data source
 abstract class MessageRemoteDataSource {
   Future<List<MessageModel>> getMessages(
     String groupChatId,

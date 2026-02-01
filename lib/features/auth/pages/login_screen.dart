@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:messenger_clone/features/auth/data/datasources/otp_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/features/auth/presentation/bloc/auth_bloc.dart';
@@ -43,17 +43,7 @@ class LoginScreenState extends State<LoginScreen> {
               message: state.message,
             );
           } else if (state is AuthAuthenticated) {
-            // Main login success
             Navigator.of(context).pop(); // Close loading dialog
-            // Save Current User ID locally is handled by Repository/Bloc now?
-            // But UI code also did DeviceService.saveLoginDeviceInfo(userID).
-            // We might need to do that here if not in Bloc.
-            // Repository.signIn DOES saveUserId and PushToken.
-            // It does NOT call DeviceService.saveLoginDeviceInfo.
-            // We should do it here if possible.
-            // But we don't have userID in AuthAuthenticated?
-            // AuthAuthenticated(user: User).
-            // We can access state.user.uid.
             final user = state.user;
             await GetIt.I<DeviceRepository>().saveLoginDeviceInfo(user.uid);
             if (!context.mounted) return;
@@ -63,7 +53,6 @@ class LoginScreenState extends State<LoginScreen> {
               (route) => false,
             );
           } else if (state is AuthCredentialsChecked) {
-            // Credentials Valid -> Check Device
             if (state.isValid && state.userId != null) {
               final userID = state.userId!;
               final checkResult = await GetIt.I<DeviceRepository>()
@@ -72,7 +61,6 @@ class LoginScreenState extends State<LoginScreen> {
               if (!context.mounted) return;
 
               if (check) {
-                // Trusted Device -> Proceed to Real Login
                 context.read<AuthBloc>().add(
                   LoginEvent(
                     email: _emailController.text,
@@ -80,7 +68,6 @@ class LoginScreenState extends State<LoginScreen> {
                   ),
                 );
               } else {
-                // New Device -> OTP
                 Navigator.of(context).pop(); // Close loading dialog
                 final otp = OTPEmailService.generateOTP();
                 await OTPEmailService.sendOTPEmail(_emailController.text, otp);
@@ -94,7 +81,6 @@ class LoginScreenState extends State<LoginScreen> {
                           email: _emailController.text,
                           nextScreen: () => MainPage(),
                           action: () async {
-                            // On OTP Success
                             context.read<AuthBloc>().add(
                               LoginEvent(
                                 email: _emailController.text,
@@ -188,7 +174,6 @@ class LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(color: Colors.white),
               ),
               SizedBox(height: 20),
-              // Login Button
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
@@ -217,8 +202,6 @@ class LoginScreenState extends State<LoginScreen> {
                             (context) =>
                                 const LoadingDialog(message: "Logging in..."),
                       );
-
-                      // Trigger Check Credentials via Bloc
                       context.read<AuthBloc>().add(
                         CheckCredentialsEvent(
                           email: _emailController.text,

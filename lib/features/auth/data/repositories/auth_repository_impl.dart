@@ -1,4 +1,4 @@
-﻿import 'package:dartz/dartz.dart';
+import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:messenger_clone/core/error/failure.dart';
 import 'package:messenger_clone/features/auth/data/datasources/auth_remote_datasource.dart';

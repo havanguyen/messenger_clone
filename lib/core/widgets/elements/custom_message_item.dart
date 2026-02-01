@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:messenger_clone/core/widgets/elements/video_player_widget.dart';
 import 'package:messenger_clone/features/messages/presentation/bloc/message_bloc.dart';
@@ -50,7 +50,7 @@ class _CustomMessageItemState extends State<CustomMessageItem> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
 
                           children:
-                              ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ‘'].map((
+                              ['👍', '❤️', '😂', '😮', '😢', '👏'].map((
                                 reaction,
                               ) {
                                 return GestureDetector(

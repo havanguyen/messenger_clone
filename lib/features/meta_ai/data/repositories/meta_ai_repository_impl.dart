@@ -1,4 +1,3 @@
-/// MetaAI Repository Implementation
 library;
 import 'package:dartz/dartz.dart';
 import 'package:messenger_clone/core/error/failure.dart';
@@ -53,7 +52,6 @@ class MetaAiRepositoryImpl implements MetaAiRepository {
   Future<Either<Failure, List<Map<String, dynamic>>>> getConversations() async {
     try {
       if (!await networkInfo.isConnected) {
-        // Return local data when offline
         final localConversations =
             await localDataSource.getLocalConversations();
         return Right(localConversations);
@@ -101,7 +99,6 @@ class MetaAiRepositoryImpl implements MetaAiRepository {
   @override
   Future<Either<Failure, void>> syncWithServer() async {
     try {
-      // Sync logic here
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
