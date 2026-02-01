@@ -28,10 +28,10 @@ class _StoryDetailPageState extends State<StoryDetailPage>
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   VideoPlayerController? _nextVideoPlayerController;
-  ChewieController? _nextChewieController; // ThÃªm ChewieController cho tin sau
+  ChewieController? _nextChewieController;
   VideoPlayerController? _prevVideoPlayerController;
   ChewieController?
-  _prevChewieController; // ThÃªm ChewieController cho tin trÆ°á»›c
+  _prevChewieController;
   bool _isPlaying = true;
   bool _isLoading = false;
   double _dragOffset = 0.0;

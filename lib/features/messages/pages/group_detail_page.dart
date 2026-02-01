@@ -63,9 +63,10 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
               ),
             );
           } else if (state is MessageError) {
+            debugPrint('MessageError: ${state.error}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.error),
+                content: Text('Something went wrong. Please try again.'),
                 backgroundColor: Colors.red,
                 duration: const Duration(seconds: 2),
               ),
@@ -77,8 +78,12 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
             if (state is MessageLoading) {
               return const Center(child: CircularProgressIndicator());
             } else if (state is MessageError) {
+              debugPrint('MessageError: ${state.error}');
               return Center(
-                child: ContentText(state.error, color: context.theme.red),
+                child: ContentText(
+                  'Something went wrong. Please try again.',
+                  color: context.theme.red,
+                ),
               );
             } else if (state is MessageLoaded) {
               return SingleChildScrollView(
@@ -297,5 +302,3 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     );
   }
 }
-
-

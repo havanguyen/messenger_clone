@@ -76,25 +76,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final userId = await checkAuthStatusUseCase();
     if (userId != null) {
-      // Ideally we should fetch User object here.
-      // Since checkAuthStatus returns ID, we might assume functionality relies on FirebaseAuth.currentUser which persists.
-      // But Clean Architecture -> UseCase should return Entity.
-      // Let's emit Loading then assume Authenticated if ID exists? No, need User object.
-      // We don't have GetUserUseCase injected yet.
-      // Ideally CheckAuthStatus returns User? or we use GetCurrentUserUseCase.
-      // checkAuthStatusUseCase returns ID.
-      // We can use FirebaseAuth.instance.currentUser as a fallback if repo doesn't provide user fetching.
-      // But repository has getCurrentUser().
-      // Let's use that logic? But we don't have that Usecase injected.
-      // Let's fallback to emitting AuthInitial or we need to inject GetCurrentUserUseCase.
-      // I will assume for now, if ID exists, we are authenticated.
-      // But we need to pass User object to AuthAuthenticated.
-      // So I will fix this locally by fetching user via FirebaseAuth (dirty) or injecting GetCurrentUserUseCase?
-      // I didn't inject GetCurrentUserUseCase in the rewrite.
-      // I should add it.
-      // Wait, I will use checkAuthStatusUseCase which returns ID.
-      // I need to fetch user.
-      // Let's assume standard behavior:
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         emit(AuthAuthenticated(user: user));
@@ -149,7 +130,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    // First get properties
     final idResult = await getUserIdUseCase(event.email);
     await idResult.fold(
       (failure) async => emit(AuthError(message: failure.message)),
@@ -158,18 +138,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(const AuthError(message: "User not found"));
           return;
         }
-        // For now, generating a dummy password if logic requires it, OR better:
-        // AuthRemoteDataSource.resetPassword logic sends email.
-        // But it takes 'newPassword' argument.
-        // Wait, existing logic in AuthRemoteDataSource.resetPassword:
-        // "Firebase handles password reset via email usually. This signature is awkward... we fetch email from userId then send rest."
-        // AND it requires 'newPassword'.
-        // Basically the RemoteDataSource.resetPassword logic calls _auth.sendPasswordResetEmail and IGNORES newPassword?
-        // Let's check:
-        // await _auth.sendPasswordResetEmail(email: doc.data()!['email']);
-        // Yes, it ignores newPassword.
-        // So we can pass any dummy string.
-
         final result = await resetPasswordUseCase(
           ResetPasswordParams(userId: userId, newPassword: ''),
         );
@@ -189,7 +157,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await deleteAccountUseCase();
     result.fold(
       (failure) => emit(AuthError(message: failure.message)),
-      (_) => emit(AuthAccountDeleted()), // Or AuthUnauthenticated
+      (_) => emit(AuthAccountDeleted()),
     );
   }
 

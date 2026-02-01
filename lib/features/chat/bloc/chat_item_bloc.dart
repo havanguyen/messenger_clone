@@ -75,16 +75,12 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
             chatItems.removeAt(index);
             chatItems.insert(0, chatItem);
           } else {
-            // New chat item case?
             chatItems.insert(
               0,
               ChatItem(groupMessage: groupMessage, meId: currentState.meId),
             );
           }
-
           emit(currentState.copyWith(chatItems: chatItems));
-          // Re-subscribe if needed, or just stay subscribed
-          // add(SubscribeToChatStreamEvent());
         }
       } catch (error) {
         emit(ChatItemError(message: error.toString()));
@@ -124,30 +120,11 @@ class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
 
           _chatStreamSubscription = stream.listen(
             (payload) {
-              // Payload is List<Map<String, dynamic>> from Supabase stream
-              // Represents the row(s) that changed (User row)
               if (payload.isNotEmpty) {
                 final userData = payload.first;
-                // Check if groupMessages changed?
-                // Simplification: Just refresh the chat list if we get a user update for now
-                // Ideally we diff or check specific fields.
-                // Or if we implemented separate stream for group messages, we would handle that.
-
-                // For now, let's just trigger a reload if we don't have enough info,
-                // or better yet, since we don't know EXACTLY what changed without diffing,
-                // maybe just re-fetch is safest but expensive.
-
-                // Note: Supabase realtime usually gives you the new record.
-                // If we are listening to user table, we get user row updates.
-                // This includes new 'groupMessages' list.
-
-                // Let's iterate over groupMessages in user doc and see if we have them.
-                // This is complex to do fully correct in one go.
-                // Let's assume ANY update to User triggers a refresh of chat items for now?
-                // Or at least fetch the group list again.
                 add(
                   GetChatItemEvent(),
-                ); // Re-fetch everything (Cleanest for migration first pass)
+                );
               }
             },
             onError: (error) {

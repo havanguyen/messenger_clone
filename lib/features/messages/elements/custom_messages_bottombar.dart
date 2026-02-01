@@ -8,6 +8,9 @@ import 'dart:io';
 
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 
+/// Thumbs up emoji constant using Unicode escape sequence
+const String kThumbsUpEmoji = "\u{1F44D}";
+
 class CustomMessagesBottomBar extends StatefulWidget {
   final TextEditingController textController;
   final void Function()? onSendMessage;
@@ -200,7 +203,7 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
                     ),
                     filled: true,
                     fillColor: context.theme.grey,
-                    hintText: "Nháº¯n tin",
+                    hintText: "Message",
                     hintStyle: TextStyle(color: context.theme.textColor),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -216,7 +219,7 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
                   widget.onSendMessage?.call();
                   _focusNode.requestFocus();
                 } else {
-                  context.read<MessageBloc>().add(MessageSendEvent("ðŸ‘"));
+                  context.read<MessageBloc>().add(MessageSendEvent(kThumbsUpEmoji));
                 }
               },
               icon: Icon(
@@ -312,5 +315,3 @@ class _CustomMessagesBottomBarState extends State<CustomMessagesBottomBar> {
     );
   }
 }
-
-

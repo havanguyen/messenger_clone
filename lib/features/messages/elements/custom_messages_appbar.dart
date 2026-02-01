@@ -74,13 +74,13 @@ class CustomMessagesAppBar extends StatelessWidget
     );
 
     if (duration.inDays > 0) {
-      return "Hoáº¡t Ä‘á»™ng ${duration.inDays} ngÃ y trÆ°á»›c";
+      return "Active ${duration.inDays} day${duration.inDays > 1 ? 's' : ''} ago";
     } else if (duration.inHours > 0) {
-      return "Hoáº¡t Ä‘á»™ng ${duration.inHours} giá» trÆ°á»›c";
+      return "Active ${duration.inHours} hour${duration.inHours > 1 ? 's' : ''} ago";
     } else if (duration.inMinutes > 0) {
-      return "Hoáº¡t Ä‘á»™ng ${duration.inMinutes} phÃºt trÆ°á»›c";
+      return "Active ${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''} ago";
     } else {
-      return "Äang hoáº¡t Ä‘á»™ng";
+      return "Active now";
     }
   }
 
@@ -117,7 +117,7 @@ class CustomMessagesAppBar extends StatelessWidget
                     overflow: TextOverflow.ellipsis,
                   ),
                   ContentText(
-                    isGroup ? "Äang hoáº¡t Ä‘á»™ng" : _getOfflineDurationText(),
+                    isGroup ? "Active now" : _getOfflineDurationText(),
                     overflow: TextOverflow.ellipsis,
                     color: context.theme.textGrey,
                   ),
@@ -157,4 +157,3 @@ class CustomMessagesAppBar extends StatelessWidget
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
-

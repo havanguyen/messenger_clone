@@ -3,10 +3,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/rendering.dart';
-// import 'package:messenger_clone/core/services/story_service.dart'; // Removed
 import 'package:messenger_clone/features/story/domain/repositories/story_repository.dart';
 import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
-import 'package:messenger_clone/features/main_page/main_page.dart';
 import 'dart:ui' as ui;
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/auth/domain/repositories/auth_repository.dart';
@@ -84,7 +82,12 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
         }
         return;
       }
-      _cameraController = CameraController(_cameras![0], ResolutionPreset.high);
+      _cameraController = CameraController(
+        _cameras![0],
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
       await _cameraController!.initialize();
       if (mounted) {
         setState(() {
@@ -121,7 +124,12 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
     setState(() => _isLoading = true);
     await _cameraController?.stopVideoRecording().catchError((_) {});
     await _cameraController?.dispose();
-    _cameraController = CameraController(newCamera, ResolutionPreset.high);
+    _cameraController = CameraController(
+      newCamera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
     try {
       await _cameraController!.initialize();
       if (mounted) {
@@ -309,10 +317,11 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
     if (userId == null) {
       Navigator.of(context).pop();
       if (mounted) {
-        CustomAlertDialog.show(
-          context: context,
-          title: 'Error',
-          message: 'Please log in to post a story!',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please log in to post a story'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return null;
@@ -340,30 +349,20 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
         postedAt: DateTime.now(),
         totalStories: 1,
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(); // Close loading dialog
       if (mounted) {
-        CustomAlertDialog.show(
-          context: context,
-          title: 'Success',
-          message: 'Story posted successfully!',
-          onPressed: () {
-            Navigator.of(context).pop(newStory);
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const MainPage()),
-              (route) => false,
-            );
-          },
-        );
+        // Navigate back to Stories page with result
+        Navigator.of(context).pop(newStory);
       }
       return newStory;
     } catch (e) {
       Navigator.of(context).pop();
       if (mounted) {
-        CustomAlertDialog.show(
-          context: context,
-          title: 'Error',
-          message: 'Error uploading: $e',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return null;
@@ -756,9 +755,7 @@ class _GallerySelectionPageState extends State<GallerySelectionPage> {
                       painter: DrawingPainter(_drawLayers),
                       child: const SizedBox.expand(),
                     ),
-                    ..._addedStickers
-                        .map((sticker) => _buildSticker(sticker))
-                        ,
+                    ..._addedStickers.map((sticker) => _buildSticker(sticker)),
                   ],
                 ),
               ),
@@ -1040,4 +1037,3 @@ class Sticker {
     );
   }
 }
-

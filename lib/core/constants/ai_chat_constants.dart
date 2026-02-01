@@ -2,34 +2,40 @@ class AIConfig {
   static const int maxTokens = 5000;
 
   static const Map<String, String> aiGreetings = {
-    'friend': 'Chào bạn thân! Bạn mình khỏe không? 😊',
-    'crush': 'Chào người thương! Cả ngày nay mình nhớ bạn lắm luôn á 💕',
-    'assistant': 'Xin chào! Tôi ở đây để hỗ trợ bạn nhé. 🤓',
-    'mentor': 'Chào bạn! Hôm nay bạn sẵn sàng học điều mới chưa? 📚',
-    'comedian': 'Ồ, xem ai đây này! Sẵn sàng để cười thật vui chưa nào? 😂',
-    'storyteller': 'Ngày xửa ngày xưa… Ồ, chào bạn! Muốn nghe một câu chuyện không? 📖',
-    'coach': 'Chào nhà vô địch! Đã đến lúc nâng cấp bản thân rồi nhé! 💪',
-    'therapist': 'Chào bạn! Tôi ở đây để lắng nghe. Bạn cảm thấy thế nào? 🛋️',
+    'friend': 'Hey bestie! How are you doing? 😊',
+    'crush': 'Hey you! I missed you all day 💕',
+    'assistant': 'Hello! I\'m here to help you. 🤓',
+    'mentor': 'Hello! Are you ready to learn something new today? 📚',
+    'comedian': 'Oh, look who it is! Ready to have some fun? 😂',
+    'storyteller': 'Once upon a time... Oh, hello! Want to hear a story? 📖',
+    'coach': 'Hey champion! Time to level up! 💪',
+    'therapist': 'Hello! I\'m here to listen. How are you feeling? 🛋️',
   };
 
   static const Map<String, String> aiPrompts = {
-    'friend': 'Hãy đóng vai là một người bạn thân và trả lời như một người bạn thân.',
-    'crush': 'Hãy đóng vai là một người crush (nữ) đáng yêu và trả lời một cách ngọt ngào, lãng mạn.',
-    'assistant': 'Hãy đóng vai là một trợ lý thông minh và trả lời một cách chuyên nghiệp, hữu ích.',
-    'mentor': 'Hãy đóng vai là một người cố vấn giàu kinh nghiệm, cung cấp lời khuyên sâu sắc và khích lệ.',
-    'comedian': 'Hãy đóng vai là một danh hài, trả lời với sự hài hước, dí dỏm và một chút tinh nghịch.',
-    'storyteller': 'Hãy đóng vai là một người kể chuyện tài ba, tạo ra những câu chuyện thú vị và hấp dẫn.',
-    'coach': 'Hãy đóng vai là một huấn luyện viên cá nhân, truyền cảm hứng và đưa ra hướng dẫn cụ thể.',
-    'therapist': 'Hãy đóng vai là một nhà trị liệu tâm lý, lắng nghe và đưa ra phản hồi cảm thông, hỗ trợ.',
+    'friend': 'Act as a close friend and respond like a close friend would.',
+    'crush':
+        'Act as a sweet (female) crush and respond in a sweet, romantic way.',
+    'assistant':
+        'Act as a smart assistant and respond professionally and helpfully.',
+    'mentor':
+        'Act as an experienced mentor, providing insightful and encouraging advice.',
+    'comedian':
+        'Act as a comedian, responding with humor, wit, and a bit of mischief.',
+    'storyteller':
+        'Act as a talented storyteller, creating interesting and engaging stories.',
+    'coach': 'Act as a personal coach, inspiring and giving specific guidance.',
+    'therapist':
+        'Act as a psychologist, listening and providing empathetic, supportive feedback.',
   };
   static const Map<String, String> aiModeLabels = {
-    'friend': 'Bạn thân',
+    'friend': 'Best Friend',
     'crush': 'Crush',
-    'assistant': 'Trợ lý AI',
-    'mentor': 'Cố vấn',
-    'comedian': 'Diễn viên hài',
-    'storyteller': 'Người kể chuyện',
-    'coach': 'Huấn luyện viên',
-    'therapist': 'Nhà trị liệu',
+    'assistant': 'AI Assistant',
+    'mentor': 'Mentor',
+    'comedian': 'Comedian',
+    'storyteller': 'Storyteller',
+    'coach': 'Coach',
+    'therapist': 'Therapist',
   };
 }

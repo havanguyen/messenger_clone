@@ -29,8 +29,6 @@ class OTPEmailService {
           'attempts': 0,
         });
       } catch (e) {
-        // If table doesn't exist or error, generic log.
-        // Might need 'otps' table in Supabase.
         debugPrint('Failed to save OTP to DB: $e');
       }
 
@@ -38,15 +36,15 @@ class OTPEmailService {
           Message()
             ..from = Address(dotenv.env['EMAIL_OTP']!, 'Messenger Clone')
             ..recipients.add(email)
-            ..subject = 'Mã OTP xác thực'
+            ..subject = 'OTP Verification Code'
             ..text =
-                'Messenger Clone đã cho bạn mã OTP: $otp (hiệu lực 5 phút). \nCảm ơn bạn đã sử dụng dịch vụ của chúng tôi.';
+                'Messenger Clone has sent you an OTP code: $otp (valid for 5 minutes). \nThank you for using our service.';
 
       try {
         final sendOTP = await send(message, smtpServer);
         debugPrint("Message Sent : $sendOTP");
       } on MailerException catch (e) {
-        debugPrint('Gửi OTP thất bại: $e');
+        debugPrint('Failed to send OTP: $e');
       }
     });
   }
@@ -65,8 +63,7 @@ class OTPEmailService {
         if (querySnapshot.docs.isEmpty) return false;
 
         final response = querySnapshot.docs.first.data();
-        response['id'] =
-            querySnapshot.docs.first.id; // Add ID to map for easy access
+        response['id'] = querySnapshot.docs.first.id;
 
         final docId = response['id'] ?? response['\$id'];
         final attempts = response['attempts'] ?? 0;
@@ -74,7 +71,7 @@ class OTPEmailService {
 
         if (attempts >= _maxAttempts) {
           await _deleteOTP(docId);
-          throw Exception('Vượt quá số lần thử');
+          throw Exception('Exceeded maximum attempts');
         }
 
         if (DateTime.parse(expiryStr).isBefore(DateTime.now())) {
@@ -127,7 +124,7 @@ class OTPEmailService {
         final usedAttempts = response['attempts'] ?? 0;
         return _maxAttempts - usedAttempts;
       } catch (e) {
-        debugPrint('Lỗi khi lấy số lần thử: $e');
+        debugPrint('Error getting remaining attempts: $e');
         return _maxAttempts;
       }
     });

@@ -221,7 +221,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'pushTargets': FieldValue.arrayUnion([token]),
       });
     } catch (e) {
-      // Ignore push token update errors
       print("Error updating push token: $e");
     }
   }

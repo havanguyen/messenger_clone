@@ -36,17 +36,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   String title =
       type == 'video_call'
-          ? 'Cuộc gọi đến'
+          ? 'Incoming Call'
           : (message.notification?.title ?? 'New Message');
   String body =
       type == 'video_call'
-          ? 'Từ ${message.data['callerName'] ?? 'Người gọi không xác định'}'
+          ? 'From ${message.data['callerName'] ?? 'Unknown caller'}'
           : (message.notification?.body ?? '');
 
   if (type == 'video_call') {
     final androidDetails = AndroidNotificationDetails(
       'video_call_channel',
-      'Kênh cuộc gọi video',
+      'Video Call Channel',
       importance: Importance.max,
       priority: Priority.high,
       color: const Color(0xFF4CAF50), // Green color
@@ -54,12 +54,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       timeoutAfter: 30000, // Cancel after 30 seconds
       styleInformation: const BigTextStyleInformation(''), // Compact display
       actions: const [
-        AndroidNotificationAction('accept', 'Nhận', showsUserInterface: true),
-        AndroidNotificationAction(
-          'reject',
-          'Từ chối',
-          cancelNotification: true,
-        ),
+        AndroidNotificationAction('accept', 'Accept', showsUserInterface: true),
+        AndroidNotificationAction('reject', 'Reject', cancelNotification: true),
       ],
     );
 
@@ -113,7 +109,7 @@ class NotificationService {
     navigatorKey = key;
     if (navigatorKey?.currentState != null && !_navigatorReady.isCompleted) {
       _navigatorReady.complete();
-      debugPrint('NavigatorKey đã sẵn sàng');
+      debugPrint('NavigatorKey is ready');
     }
   }
 
@@ -127,7 +123,7 @@ class NotificationService {
       provisional: false,
       sound: true,
     );
-    debugPrint('Quyền thông báo: ${settings.authorizationStatus}');
+    debugPrint('Notification permission: ${settings.authorizationStatus}');
 
     await _firebaseMessaging.setForegroundNotificationPresentationOptions(
       alert: true,
@@ -177,10 +173,10 @@ class NotificationService {
 
   void _handleNotificationResponse(NotificationResponse response) {
     debugPrint(
-      'Thông báo được nhấn: ${response.payload}, Hành động: ${response.actionId}',
+      'Notification tapped: ${response.payload}, Action: ${response.actionId}',
     );
     debugPrint(
-      'Thông báo được nhấn: ${response.payload}, Hành động: ${response.actionId}',
+      'Notification tapped: ${response.payload}, Action: ${response.actionId}',
     );
     final payloadString = response.payload;
     if (payloadString != null) {
@@ -199,7 +195,7 @@ class NotificationService {
           _navigateToMessagePage(payload);
         }
       } catch (e) {
-        debugPrint('Lỗi phân tích payload thông báo: $e');
+        debugPrint('Error parsing notification payload: $e');
       }
     }
   }
@@ -242,7 +238,7 @@ class NotificationService {
         debugPrint('Retry $i: Waiting for navigatorKey...');
       }
       if (!isReady) {
-        debugPrint('NavigatorKey không sẵn sàng sau 20 giây');
+        debugPrint('NavigatorKey not ready after 20 seconds');
         return;
       }
     }
@@ -268,7 +264,7 @@ class NotificationService {
 
   Future<void> _navigateToMessagePage(Map<String, dynamic> payload) async {
     if (navigatorKey?.currentState == null) {
-      debugPrint('NavigatorKey chưa sẵn sàng để điều hướng đến trang tin nhắn');
+      debugPrint('NavigatorKey not ready to navigate to message page');
       return;
     }
 
@@ -300,11 +296,11 @@ class NotificationService {
         arguments: groupMessage,
       );
     } catch (e) {
-      debugPrint('Lỗi điều hướng đến trang tin nhắn: $e');
+      debugPrint('Error navigating to message page: $e');
       if (navigatorKey?.currentState != null) {
-        ScaffoldMessenger.of(navigatorKey!.currentState!.context).showSnackBar(
-          SnackBar(content: Text('Không thể mở trang tin nhắn: $e')),
-        );
+        ScaffoldMessenger.of(
+          navigatorKey!.currentState!.context,
+        ).showSnackBar(SnackBar(content: Text('Cannot open message page: $e')));
       }
     }
   }
@@ -313,13 +309,13 @@ class NotificationService {
     debugPrint('Call feature disabled. Payload: $payload');
     if (navigatorKey?.currentState != null) {
       ScaffoldMessenger.of(navigatorKey!.currentState!.context).showSnackBar(
-        SnackBar(content: Text('Cuộc gọi video tạm thời bị vô hiệu hóa')),
+        SnackBar(content: Text('Video call is temporarily disabled')),
       );
     }
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    debugPrint('Nhận thông báo tiền cảnh: ${message.messageId}');
+    debugPrint('Received foreground notification: ${message.messageId}');
 
     if (message.data['type'] == 'call_ended' &&
         message.data['callId'] != null) {
@@ -333,14 +329,14 @@ class NotificationService {
     if (message.data['type'] == 'video_call') {
       await _showCallNotification(
         _localNotifications,
-        message.notification?.title ?? 'Cuộc gọi đến',
-        'Từ ${message.data['callerName'] ?? 'Người gọi không xác định'}',
+        message.notification?.title ?? 'Incoming Call',
+        'From ${message.data['callerName'] ?? 'Unknown caller'}',
         message.data,
       );
     } else {
       await _showMessageNotification(
         _localNotifications,
-        message.notification?.title ?? 'Tin nhắn mới',
+        message.notification?.title ?? 'New Message',
         message.notification?.body ?? '',
         message.data,
       );
@@ -357,7 +353,7 @@ class NotificationService {
         payload['callId']?.hashCode ?? Random().nextInt(0x7FFFFFFF);
     final androidDetails = AndroidNotificationDetails(
       'video_call_channel',
-      'Kênh cuộc gọi video',
+      'Video Call Channel',
       importance: Importance.max,
       priority: Priority.high,
       color: const Color(
@@ -367,12 +363,8 @@ class NotificationService {
       timeoutAfter: 30000, // Cancel after 30 seconds
       styleInformation: const BigTextStyleInformation(''), // Compact display
       actions: const [
-        AndroidNotificationAction('accept', 'Nhận', showsUserInterface: true),
-        AndroidNotificationAction(
-          'reject',
-          'Từ chối',
-          cancelNotification: true,
-        ),
+        AndroidNotificationAction('accept', 'Accept', showsUserInterface: true),
+        AndroidNotificationAction('reject', 'Reject', cancelNotification: true),
       ],
     );
 
@@ -415,7 +407,7 @@ class NotificationService {
       debugPrint('FCM Token: $token');
       return token;
     } catch (e) {
-      debugPrint('Lỗi lấy FCM token: $e');
+      debugPrint('Error getting FCM token: $e');
       return null;
     }
   }

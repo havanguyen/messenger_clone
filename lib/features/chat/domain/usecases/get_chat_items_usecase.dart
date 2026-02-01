@@ -20,7 +20,6 @@ class GetChatItemsUseCase
     final result = await repository.getGroupMessagesByUserId(params.userId);
 
     return result.fold((failure) => Left(failure), (groupMessages) {
-      // Sort by last message time
       groupMessages.sort((a, b) {
         if (a.lastMessage == null && b.lastMessage == null) {
           return 0;
@@ -34,8 +33,6 @@ class GetChatItemsUseCase
           );
         }
       });
-
-      // Convert to ChatItems
       final chatItems =
           groupMessages
               .map((gm) => ChatItem(groupMessage: gm, meId: params.userId))

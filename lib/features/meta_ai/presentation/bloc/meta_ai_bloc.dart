@@ -178,7 +178,7 @@ class MetaAiBloc extends Bloc<MetaAiEvent, MetaAiState> {
     } catch (e) {
       emit(
         MetaAiError(
-          error: 'Không tải được danh sách trò chuyện.',
+          error: 'Failed to load conversation list.',
           isConnected: true,
         ),
       );

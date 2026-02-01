@@ -73,9 +73,15 @@ class GroupMessage {
               )
               : null,
       users:
-          (json['users'] as List<dynamic>?)
-              ?.map((e) => User.fromMap(e as Map<String, dynamic>))
-              .toList() ??
+          (json['users'] as List<dynamic>?)?.map((e) {
+            if (e is Map<String, dynamic>) {
+              return User.fromMap(e);
+            } else if (e is String) {
+              // Handle case where users are stored as just IDs
+              return User.createMeUser(e);
+            }
+            return User.createMeUser('');
+          }).toList() ??
           [],
       isGroup: json['isGroup'] as bool? ?? false,
       avatarGroupUrl: json['avatarGroupUrl'] as String?,

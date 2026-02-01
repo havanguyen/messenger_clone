@@ -106,9 +106,9 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            bottomItem(context, 0, Icons.chat_bubble, "Äoáº¡n chat"),
+            bottomItem(context, 0, Icons.chat_bubble, "Chats"),
             bottomItem(context, 1, Icons.donut_large, "Meta AI"),
-            bottomItem(context, 2, Icons.view_agenda, "Tin"),
+            bottomItem(context, 2, Icons.view_agenda, "Stories"),
             bottomItem(context, 3, Icons.menu, "Menu"),
           ],
         ),
@@ -141,4 +141,3 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     );
   }
 }
-

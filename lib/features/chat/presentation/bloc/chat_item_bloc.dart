@@ -16,17 +16,10 @@ import 'package:messenger_clone/features/messages/domain/models/message_model.da
 part 'chat_item_event.dart';
 part 'chat_item_state.dart';
 
-/// ChatItemBloc - Refactored to use UseCases pattern
-///
-/// This bloc follows MVVM pattern where:
-/// - Events = User Actions
-/// - States = UI State
-/// - UseCases = Business Logic
 class ChatItemBloc extends Bloc<ChatItemEvent, ChatItemState> {
   final GetChatItemsUseCase getChatItemsUseCase;
   final GetFriendsUseCase getFriendsUseCase;
 
-  // Keep reference to remote datasource for stream (not via UseCase for real-time)
   final ChatRemoteDataSource? remoteDataSource;
 
   late final Future<String> meId;

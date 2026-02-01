@@ -29,8 +29,6 @@ class StoryRemoteDataSourceImpl implements StoryRemoteDataSource {
         final fileId = const Uuid().v4();
         final fileExt = mediaFile.path.split('.').last;
         final fileName = '$userId/$fileId.$fileExt';
-
-        // Upload to Storage
         await supabase.storage.from(_storageBucket).upload(fileName, mediaFile);
 
         final mediaUrl = supabase.storage
@@ -57,7 +55,7 @@ class StoryRemoteDataSourceImpl implements StoryRemoteDataSource {
           'mediaType': mediaType,
           'createdAt': now.toIso8601String(),
           'totalStories': totalStories,
-          'fileId': fileName, // Storing file path/ID for deletion
+          'fileId': fileName,
         });
 
         return mediaUrl;
@@ -71,18 +69,14 @@ class StoryRemoteDataSourceImpl implements StoryRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchFriendsStories(String userId) async {
     return NetworkUtils.withNetworkCheck(() async {
       try {
-        // Use FriendRepository to get friends list
         final friendsResult = await friendRepository.getFriendsList(userId);
 
         final friendsList = friendsResult.fold(
-          (l) => <Map<String, dynamic>>[], // Return empty if error (or throw?)
+          (l) => <Map<String, dynamic>>[],
           (r) => r,
         );
 
         if (friendsResult.isLeft()) {
-          // Maybe we should propagate error, but logic in service was throwing.
-          // Impl here: if fetch friends fails, maybe just return empty or throw.
-          // Service logic: threw exception if FriendService failed.
           final failure = friendsResult.fold((l) => l, (r) => null);
           throw Exception(failure?.message ?? "Unknown error fetching friends");
         }

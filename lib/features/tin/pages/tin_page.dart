@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:messenger_clone/core/utils/custom_theme_extension.dart';
 import 'package:messenger_clone/core/widgets/custom_text_style.dart';
 
-import 'package:messenger_clone/core/widgets/elements/custom_button.dart';
 import 'package:messenger_clone/features/tin/pages/detail_tinPage.dart';
 import 'package:messenger_clone/features/tin/pages/gallery_uploadTin.dart';
 import 'package:messenger_clone/core/local/hive_storage.dart';
-import '../../../core/widgets/dialog/custom_alert_dialog.dart';
 import 'package:get_it/get_it.dart';
 import 'package:messenger_clone/features/story/domain/repositories/story_repository.dart';
 import 'package:messenger_clone/features/user/domain/repositories/user_repository.dart';
@@ -23,13 +21,19 @@ class TinPage extends StatefulWidget {
 class _TinPageState extends State<TinPage> {
   final List<StoryItem> stories = [];
   String? _currentUserAvatarUrl;
-  bool _isRefreshing = false; // Tracks refresh state
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchCurrentUserData();
-    _fetchStoriesFromAppwrite();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([_fetchCurrentUserData(), _fetchStoriesFromAppwrite()]);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _fetchCurrentUserData() async {
@@ -37,19 +41,13 @@ class _TinPageState extends State<TinPage> {
       final userId = await HiveService.instance.getCurrentUserId();
       final result = await GetIt.I<UserRepository>().fetchUserDataById(userId);
       final userData = result.fold((l) => throw Exception(l.message), (r) => r);
-      setState(() {
-        _currentUserAvatarUrl =
-            userData['photoUrl'] as String? ??
-            'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023';
-      });
-    } catch (e) {
       if (mounted) {
-        CustomAlertDialog.show(
-          context: context,
-          title: 'Lá»—i',
-          message: 'KhÃ´ng thá»ƒ láº¥y thÃ´ng tin ngÆ°á»i dÃ¹ng: $e',
-        );
+        setState(() {
+          _currentUserAvatarUrl = userData['photoUrl'] as String?;
+        });
       }
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
     }
   }
 
@@ -70,10 +68,7 @@ class _TinPageState extends State<TinPage> {
             data['userId'] as String,
           );
           final userData = userResult.fold(
-            (l) => <String, dynamic>{
-              'userName': 'Unknown',
-              'photoUrl': '',
-            }, // Fallback or throw?
+            (l) => <String, dynamic>{'userName': 'Unknown', 'photoUrl': ''},
             (r) => r,
           );
 
@@ -95,36 +90,26 @@ class _TinPageState extends State<TinPage> {
 
       if (mounted) {
         setState(() {
-          stories.clear(); // Clear old stories
+          stories.clear();
           stories.addAll(storyItems);
           stories.sort((a, b) => b.postedAt.compareTo(a.postedAt));
         });
       }
     } catch (e) {
+      debugPrint('Error loading stories: $e');
       if (mounted) {
-        CustomAlertDialog.show(
-          context: context,
-          title: 'Lá»—i',
-          message: 'Lá»—i khi láº¥y DANH SÃCH TIN: $e',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading stories'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  // Handle pull-to-refresh
   Future<void> _onRefresh() async {
-    setState(() {
-      _isRefreshing = true; // Show loading indicator
-    });
-    try {
-      await _fetchStoriesFromAppwrite(); // Refresh stories
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false; // Hide loading indicator
-        });
-      }
-    }
+    await _fetchStoriesFromAppwrite();
   }
 
   @override
@@ -141,10 +126,8 @@ class _TinPageState extends State<TinPage> {
     final displayStories = [
       StoryItem(
         userId: 'add_to_tin',
-        title: 'ThÃªm vÃ o tin',
-        imageUrl:
-            _currentUserAvatarUrl ??
-            'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023',
+        title: 'Add to Story',
+        imageUrl: _currentUserAvatarUrl ?? '',
         avatarUrl: '',
         notificationCount: 0,
         postedAt: DateTime.now(),
@@ -157,75 +140,101 @@ class _TinPageState extends State<TinPage> {
       appBar: AppBar(
         backgroundColor: context.theme.bg,
         elevation: 0,
-        title: const TitleText("Tin"),
+        title: const TitleText("Stories"),
       ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _onRefresh,
-            color: context.theme.grey, // Matches the loading indicator color
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-                childAspectRatio: 0.7,
-              ),
-              itemCount: displayStories.length,
-              itemBuilder: (context, index) {
-                final story = displayStories[index];
-                final isFirst = index == 0;
-                return GestureDetector(
-                  onTap: () async {
-                    if (isFirst) {
-                      final newStory = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const GallerySelectionPage(),
-                        ),
-                      );
-                      if (newStory != null &&
-                          newStory is StoryItem &&
-                          mounted) {
-                        setState(() {
-                          stories.add(newStory);
-                          stories.sort(
-                            (a, b) => b.postedAt.compareTo(a.postedAt),
+      body:
+          _isLoading
+              ? _buildLoadingShimmer(context)
+              : RefreshIndicator(
+                onRefresh: _onRefresh,
+                color: context.theme.blue,
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8.0,
+                    mainAxisSpacing: 8.0,
+                    childAspectRatio: 0.7,
+                  ),
+                  itemCount: displayStories.length,
+                  itemBuilder: (context, index) {
+                    final story = displayStories[index];
+                    final isFirst = index == 0;
+                    return GestureDetector(
+                      onTap: () async {
+                        if (isFirst) {
+                          final newStory = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const GallerySelectionPage(),
+                            ),
                           );
-                        });
-                        CustomAlertDialog.show(
-                          context: context,
-                          title: 'ThÃ nh cÃ´ng',
-                          message: 'ÄÃ£ thÃªm tin má»›i!',
-                        );
-                      }
-                    } else {
-                      final userStories =
-                          stories
-                              .where((s) => s.userId == story.userId)
-                              .toList();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => StoryDetailPage(
-                                stories: userStories,
-                                initialIndex: 0,
+                          if (newStory != null &&
+                              newStory is StoryItem &&
+                              mounted) {
+                            setState(() {
+                              stories.add(newStory);
+                              stories.sort(
+                                (a, b) => b.postedAt.compareTo(a.postedAt),
+                              );
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Story added successfully!'),
+                                backgroundColor: Colors.green,
                               ),
-                        ),
-                      );
-                    }
+                            );
+                          }
+                        } else {
+                          final userStories =
+                              stories
+                                  .where((s) => s.userId == story.userId)
+                                  .toList();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => StoryDetailPage(
+                                    stories: userStories,
+                                    initialIndex: 0,
+                                  ),
+                            ),
+                          );
+                        }
+                      },
+                      child: StoryCard(story: story, isFirst: isFirst),
+                    );
                   },
-                  child: StoryCard(story: story, isFirst: isFirst),
-                );
-              },
+                ),
+              ),
+    );
+  }
+
+  Widget _buildLoadingShimmer(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(8.0),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8.0,
+        mainAxisSpacing: 8.0,
+        childAspectRatio: 0.7,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            color: context.theme.grey.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: context.theme.grey,
             ),
           ),
-          if (_isRefreshing)
-            Center(child: CircularProgressIndicator(color: context.theme.grey)),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -247,20 +256,48 @@ class _StoryCardState extends State<StoryCard> {
       borderRadius: BorderRadius.circular(16.0),
       child: Stack(
         children: [
-          CachedNetworkImage(
-            imageUrl:
-                widget.isFirst
-                    ? widget.story.imageUrl
-                    : (widget.story.isVideo)
-                    ? 'https://images.hcmcpv.org.vn/res/news/2024/02/24-02-2024-ve-su-dung-co-dang-va-hinh-anh-co-dang-cong-san-viet-nam-FE119635-details.jpg?vs=24022024094023'
-                    : widget.story.imageUrl,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorWidget:
-                (context, error, stackTrace) =>
-                    const Icon(Icons.error, color: Colors.red),
-          ),
+          if (widget.story.imageUrl.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl:
+                  widget.isFirst
+                      ? widget.story.imageUrl
+                      : (widget.story.isVideo)
+                      ? ''
+                      : widget.story.imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder:
+                  (context, url) => Container(
+                    color: context.theme.grey.withOpacity(0.3),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: context.theme.grey,
+                      ),
+                    ),
+                  ),
+              errorWidget:
+                  (context, error, stackTrace) => Container(
+                    color: context.theme.grey.withOpacity(0.3),
+                    child: Icon(
+                      Icons.person,
+                      color: context.theme.textGrey,
+                      size: 50,
+                    ),
+                  ),
+            )
+          else
+            Container(
+              color: context.theme.grey.withOpacity(0.3),
+              child: Center(
+                child: Icon(
+                  Icons.person,
+                  color: context.theme.textGrey,
+                  size: 50,
+                ),
+              ),
+            ),
           if (!widget.isFirst)
             Positioned(
               top: 8,
@@ -276,9 +313,14 @@ class _StoryCardState extends State<StoryCard> {
                 ),
                 child: CircleAvatar(
                   radius: 18,
-                  backgroundImage: CachedNetworkImageProvider(
-                    widget.story.avatarUrl,
-                  ),
+                  backgroundImage:
+                      widget.story.avatarUrl.isNotEmpty
+                          ? CachedNetworkImageProvider(widget.story.avatarUrl)
+                          : null,
+                  child:
+                      widget.story.avatarUrl.isEmpty
+                          ? Icon(Icons.person, size: 20)
+                          : null,
                 ),
               ),
             ),

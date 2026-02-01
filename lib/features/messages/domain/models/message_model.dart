@@ -93,9 +93,15 @@ class MessageModel extends HiveObject {
       reactions: CommonFunction.reactionsFromString(map['reactions']),
       id: id as String,
       usersSeen:
-          (map['usersSeen'] as List<dynamic>?)
-              ?.map((e) => User.fromMap(e as Map<String, dynamic>))
-              .toList() ??
+          (map['usersSeen'] as List<dynamic>?)?.map((e) {
+            if (e is Map<String, dynamic>) {
+              return User.fromMap(e);
+            } else if (e is String) {
+              // Handle case where usersSeen contains just user IDs
+              return User.fromMap({'id': e});
+            }
+            return User.fromMap({'id': ''});
+          }).toList() ??
           [],
     );
 

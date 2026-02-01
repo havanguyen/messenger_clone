@@ -25,13 +25,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> clearUserData() async {
-    // Logic from AuthService.signOut
     await Store.setTargetId('');
     MetaAiServiceHive.clearAllBoxes();
     HiveService.instance.clearCurrentUserId();
     await HiveChatRepository.instance.clearAllMessages();
-    // In a pure LocalDS, we might not want to clear OTHER features' data (Chat/MetaAI).
-    // But for now, we preserve legacy behavior.
   }
 
   @override

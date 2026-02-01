@@ -25,7 +25,6 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
-      // Token and Persistence Logic
       final user = credential.user;
       if (user != null) {
         await localDataSource.saveUserId(user.uid);
@@ -54,19 +53,11 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
       final userId = credential.user?.uid;
-      // Sign out immediately as this is just a check
       if (userId != null) {
-        // We need token to sign out properly via remote.signOut signature?
-        // But here we just want to invalidate this session.
-        // AuthRemoteDataSource.signOut signature requires userId and token.
-        // We don't have token from local yet (we are not logged in).
-        // We can just call firebaseAuth.signOut directly in remote?
-        // Or call remote.signOut with empty strings (it handles null/empty checks).
         await remoteDataSource.signOut(userId, '');
       }
       return Right(userId);
     } catch (e) {
-      // If sign in fails, standard error
       return Left(AuthFailure(message: e.toString()));
     }
   }

@@ -17,10 +17,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:messenger_clone/features/messages/enum/message_status.dart';
 
-// Ideally we use UseCases, but for complex legacy logic, we might use Repository directly temporarily
-// or we wrap logic in Bloc.
-// Here we inject UseCases and Repository.
-
 part 'message_event.dart';
 part 'message_state.dart';
 
@@ -58,15 +54,12 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     on<AddMeSeenMessageEvent>(_onAddMeSeenMessageEvent);
     on<MessageRemoveGroupMemberEvent>(_onRemoveMember);
   }
-
-  // Helper methodologies (copied from original)
   List<appUser.User> _updateOthers(GroupMessage groupMessage, String meId) {
     return (groupMessage.users.length > 1)
         ? groupMessage.users.where((user) => user.id != meId).toList()
         : groupMessage.users.toList();
   }
 
-  // Refactored _onLoad using UseCase/Repository
   void _onLoad(MessageLoadEvent event, Emitter<MessageState> emit) async {
     emit(MessageLoading());
     try {
@@ -84,10 +77,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
       GroupMessage finalGroupMessage =
           groupResult.fold((_) => null, (group) => group)!;
-
-      // Update last message seen status logic
-      // This logic interacts with repository directly.
-      // Ideally should be a UseCase "MarkMessageAsSeen".
       MessageModel? lastMessage = finalGroupMessage.lastMessage;
       if (lastMessage != null &&
           lastMessage.idFrom != me &&
@@ -103,34 +92,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
           (finalGroupMessage.users.length > 1)
               ? finalGroupMessage.users.where((user) => user.id != me).toList()
               : (finalGroupMessage.users).toList();
-
-      // Using UseCase for loading messages? Or Hive directly?
-      // Original used HiveChatRepository.instance.getMessages
-      // Our MessageRepository should handle caching strategy.
-      // But implementation of MessageRepositoryImpl uses remote/local logic.
-      // Let's use the Repository to get cached messages if possible, or use local datasource.
-      // Since MessageRepository interface definition might not have explicit "getCachedMessages",
-      // we check the interface.
-      // The interface has `getMessages`. Implementation of `getMessages` in Impl checks connection?
-      // Actually `loadMessagesUseCase` calls `repository.getMessages`.
-
-      // Original code explicitly fetched from Hive first.
-      // To preserve behavior, we might need to access local storage via repository?
-      // The `MessageRepository` interface I created earlier has `getMessages`.
-      // Let's assume `getMessages` handles the logic (cache first or network?).
-      // The `MessageRepositoryImpl` I created implements `getMessages` using `NetworkInfo`.
-      // If connected, fetch remote. If not, fetch local?
-      // Original code: Hive.getMessages -> emit -> then fetch remote? or just Hive?
-      // Original code:
-      // List<MessageModel> cachedMessages = await HiveChatRepository.instance.getMessages(...)
-      // emit(MessageLoaded(messages: cachedMessages...))
-
-      // I should stick to existing logic: Fetch local first.
-      // I can add `getCachedMessages` to Repository interface or just use HiveChatRepository directly?
-      // To follow Clean Architecture, I should use Repository.
-      // I'll assume I can access HiveChatRepository via data layer, but ideally via Repository.
-      // For now, I'll use HiveChatRepository directly to avoid breaking changes if Repository doesn't support it yet,
-      // OR better, import HiveChatRepository as it is a Data Source.
 
       List<MessageModel> cachedMessages =
           await HiveChatRepository.instance.getMessages(
@@ -191,9 +152,9 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         );
 
         result.fold(
-          (failure) => emit(
-            currentState.copyWith(isLoadingMore: false),
-          ), // Or show error
+          (failure) {
+            emit(currentState.copyWith(isLoadingMore: false));
+          }, // Or show error
           (newMessages) async {
             Map<String, VideoPlayerController> newVideoPlayers = {};
             Map<String, Image> newImages = {};
@@ -406,16 +367,20 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
     if (otherUser != null) {
       try {
         // Use repository to create/get
-        // Assuming createGroupMessages exists in Repository interface
-        // If not, we have to fix interface
-        final group = await (chatRepository as dynamic).createGroupMessages(
+        // createGroupMessages returns Either<Failure, GroupMessage>
+        final result = await chatRepository.createGroupMessages(
           userIds: [me, otherUser.id],
           groupId: 'PRIVATE_${[me, otherUser.id].join('_')}',
-          groupName: '', // Optional?
+          groupName: '',
           isGroup: false,
           createrId: me,
         );
-        return Right(group);
+
+        // Unwrap the Either before returning
+        return result.fold(
+          (failure) => Left(failure.toString()),
+          (group) => Right(group),
+        );
       } catch (e) {
         return Left(e.toString());
       }
@@ -444,34 +409,13 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
               .toList();
       final Set<String> updatedUserIds = updatedUser.map((e) => e.id).toSet();
 
-      GroupMessage updatedGroupFromBackend =
-          currentState.groupMessage; // Default fallback
-
-      // Need a method in repository to remove member.
-      // Based on previous code: chatRepository.updateMemberOfGroup
-      // If it's not in interface, we might have issues.
-      // Assuming we can use createGroupMessages logic or similar?
-      // Or we need to update interface.
-      // For now, let's assume updateGroupMessage covers it or we cast to dynamic but handle Either if impl returns Either.
-      // Since updateMemberOfGroup is likely specific, and missing from interface I saw earlier?
-      // Interface has: updateMessage, createGroupMessages, getGroupMessagesByGroupId.
-      // It DOES NOT have updateMemberOfGroup.
-      // I should add it to interface or use updateGroupMessage if appropriate.
-
-      // FIX STRATEGY:
-      // 1. Temporarily cast to dynamic to call the method on implementation (assuming implementation has it from legacy).
-      // 2. Wrap in try-catch if it returns raw value, or fold if Either.
-      // Legacy implementation usually returned raw value.
-      // If I am using the new `MessageRepositoryImpl` which I should have created (or user said "Data Layer" is done), it should return Either.
-
-      // I'll assume for now I need to fix the interface later, but to make this code compile/work with dynamic dispatch:
+      GroupMessage updatedGroupFromBackend = currentState.groupMessage;
 
       final result = await (chatRepository as dynamic).updateMemberOfGroup(
         currentState.groupMessage.groupMessagesId,
         updatedUserIds,
       );
 
-      // If result is Either (likely if new repo):
       if (result is Either) {
         result.fold(
           (failure) => throw Exception(failure.toString()),
@@ -488,8 +432,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
           successMessage: '${removedUser.name} removed from group',
         ),
       );
-
-      // ... send notification message ...
       add(
         MessageSendEvent(
           "${currentState.groupMessage.users.firstWhere((u) => u.id == me).name} removed ${removedUser.name} from the group",
@@ -613,7 +555,9 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
   void _debouncedUpdateSeenStatus(MessageModel message) {
     if (_seenStatusDebouncer?.isActive ?? false) _seenStatusDebouncer?.cancel();
     _seenStatusDebouncer = Timer(const Duration(milliseconds: 500), () {
-      add(AddMeSeenMessageEvent(message));
+      if (!isClosed) {
+        add(AddMeSeenMessageEvent(message));
+      }
     });
   }
 
@@ -661,6 +605,9 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         final currentState = state as MessageLoaded;
         await _messagesStreamSubscription?.cancel();
 
+        debugPrint(
+          'Subscribing to messages for groupMessageId: ${currentState.groupMessage.groupMessagesId}',
+        );
         final messagesStreamResult = await chatRepository.getMessagesStream([
           currentState.groupMessage.groupMessagesId,
         ]);
@@ -668,11 +615,17 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         messagesStreamResult.fold(
           (failure) => emit(MessageError(failure.toString())),
           (stream) {
-            _messagesStreamSubscription = stream.listen((payload) {
-              if (payload.isNotEmpty) {
-                add(ReceiveMessageEvent(payload));
-              }
-            });
+            _messagesStreamSubscription = stream.listen(
+              (payload) {
+                if (payload.isNotEmpty && !isClosed) {
+                  add(ReceiveMessageEvent(payload));
+                }
+              },
+              onError: (error) {
+                debugPrint('Error in messages stream: $error');
+                add(ReceiveMessageEvent([])); // Or handle error state
+              },
+            );
           },
         );
       } catch (error) {
@@ -692,22 +645,19 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
         if (_chatStreamSubscription != null) return;
         // final GroupMessage groupMessage = currentState.groupMessage; // Unused
 
-        final messagesStreamResult = await chatRepository.getMessagesStream([
+        final chatStreamResult = await chatRepository.getChatStream(
           currentState.groupMessage.groupMessagesId,
-        ]);
-
-        messagesStreamResult.fold(
-          (failure) => emit(MessageError(failure.toString())),
-          (stream) {
-            _messagesStreamSubscription = stream.listen((payload) {
-              if (payload.isNotEmpty) {
-                add(ReceiveMessageEvent(payload));
-              }
-            });
-          },
         );
+
+        chatStreamResult.fold((failure) => emit(MessageError(failure.toString())), (
+          stream,
+        ) {
+          _chatStreamSubscription = stream.listen((payload) {
+            // TODO: Handle chat update event, e.g. AddReceiveChatEvent(payload)
+            // Currently ReceiveMessageEvent expects List<Map>, check payload structure
+          });
+        });
       } catch (error) {
-        debugPrint('Error subscribing to chat stream: $error');
         emit(MessageError(error.toString()));
       }
     }
@@ -757,49 +707,51 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       try {
         final payload = event.payload;
         if (payload.isEmpty) return;
-        final data = payload.first;
 
         final currentState = state as MessageLoaded;
         List<MessageModel> messages = List<MessageModel>.from(
           currentState.messages,
         );
-
-        final MessageModel newMessage = MessageModel.fromMap(data);
-        _debouncedUpdateSeenStatus(newMessage);
-
         final String me = await meId;
 
-        if (newMessage.idFrom != me) {
-          if (messages.isNotEmpty && messages.first.id == newMessage.id) {
-            messages[0] = newMessage;
-          } else {
-            messages.insert(0, newMessage);
-          }
+        bool stateChanged = false;
 
-          // Init video/image controllers...
-          Map<String, VideoPlayerController> updatedVideoPlayers = Map.from(
-            currentState.videoPlayers,
-          );
-          Map<String, Image> updatedImages = Map.from(currentState.images);
-          if (newMessage.type == "video") {
-            // ...
+        for (final data in payload) {
+          final MessageModel newMessage = MessageModel.fromMap(data);
+
+          // Check if we need to mark as seen
+          _debouncedUpdateSeenStatus(newMessage);
+
+          final index = messages.indexWhere((m) => m.id == newMessage.id);
+          if (index != -1) {
+            // Message exists, update it
+            if (messages[index] != newMessage) {
+              messages[index] = newMessage;
+              stateChanged = true;
+            }
+          } else {
+            // Message doesn't exist, add it
+            // We check if there's a temporary message that matches (fuzzy match) could be dangerous
+            // For now, we assume _onSend updates ID fast enough OR we accept a temporary duplicate until refresh
+            messages.insert(0, newMessage);
+            stateChanged = true;
           }
-          // ...
+        }
+
+        // Sort messages to ensure order
+        messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (stateChanged) {
+          // Update video/image controllers maps if needed (cleaning up old ones?)
+          // For simplicity, we just keep existing ones and let lazy loading handle new ones
 
           emit(
             currentState.copyWith(
               messages: messages,
-              videoPlayers: updatedVideoPlayers,
-              images: updatedImages,
-              lastSuccessMessage: newMessage,
+              // We don't necessarily update videoPlayers/images maps here as they are creating on demand or init
+              // but we should pass them along
             ),
           );
-        } else {
-          final index = messages.indexWhere((m) => m.id == newMessage.id);
-          if (index != -1) {
-            messages[index] = newMessage;
-            emit(currentState.copyWith(messages: messages));
-          }
         }
       } catch (error) {
         debugPrint('Error handling realtime message: $error');
@@ -816,8 +768,11 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
 
   @override
   Future<void> close() async {
-    add(UnsubscribeFromChatStreamEvent());
-    // ... close subscriptions logic
+    // Cancel timer
+    _seenStatusDebouncer?.cancel();
+    _seenStatusDebouncer = null;
+
+    // Cancel subscriptions directly
     List<Future<void>> futureList = [];
     if (_chatStreamSubscription != null) {
       futureList.add(_chatStreamSubscription!.cancel());
@@ -827,11 +782,6 @@ class MessageBloc extends Bloc<MessageEvent, MessageState> {
       futureList.add(_messagesStreamSubscription!.cancel());
     }
     _messagesStreamSubscription = null;
-    // ... update chatting status ...
-    if (state is MessageLoaded) {
-      final currentState = state as MessageLoaded;
-      // chatRepository.updateChattingWithGroupMessId(currentState.meId, null);
-    }
     await Future.wait(futureList);
     return super.close();
   }

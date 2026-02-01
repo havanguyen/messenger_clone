@@ -11,6 +11,7 @@ import 'package:messenger_clone/features/chat/model/user.dart' as ChatModel;
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Abstract interface for remote data source
 abstract class ChatRemoteDataSource {
@@ -370,12 +371,20 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   Future<Stream<List<Map<String, dynamic>>>> getMessagesStream(
     List<String> messageIds,
   ) async {
+    String groupMessId = messageIds.isNotEmpty ? messageIds.first : '';
+    debugPrint('ChatRepo: Stream query for groupMessId: $groupMessId');
     return _firestore
         .collection('messages')
+        .where('groupMessagesId', isEqualTo: groupMessId)
+        .orderBy('createdAt', descending: true)
+        .limit(20)
         .snapshots()
-        .map(
-          (snap) => snap.docs.map((d) => {...d.data(), '\$id': d.id}).toList(),
-        );
+        .map((snap) {
+          debugPrint(
+            'ChatRepo: Stream emitted ${snap.docs.length} docs for group $groupMessId',
+          );
+          return snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+        });
   }
 
   @override

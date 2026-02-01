@@ -39,15 +39,6 @@ class AppRouter {
           settings: settings,
           child: BlocProvider(
             create: (context) {
-              // Ideally use GetIt, but for now manual instantiation if needed or use GetIt if registered.
-              // Assuming GetIt.I<MessageRepository>() works?
-              // Returning a temporary fix assuming Service Locator is set up or falling back to simple instantiation
-              // IF Service locator is not ready, I might break runtime.
-              // Let's assume manual instantiation for safety if I see what imports are needed.
-              // But I don't want to import everything here.
-              // Let's use GetIt.I if available.
-              // If not, I'll instantiate.
-              // Wait, checking imports first.
               return MessageBloc(
                 chatRepository: GetIt.I<MessageRepository>(),
                 loadMessagesUseCase: GetIt.I<LoadMessagesUseCase>(),

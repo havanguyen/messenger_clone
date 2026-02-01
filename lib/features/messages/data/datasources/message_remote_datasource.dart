@@ -1,6 +1,3 @@
-/// Message Remote Data Source
-///
-/// Handles remote message operations using Firestore.
 library;
 
 import 'dart:io';
@@ -9,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:messenger_clone/features/chat/model/group_message.dart';
 import 'package:messenger_clone/features/messages/domain/models/message_model.dart';
+import 'package:flutter/foundation.dart';
 
 /// Abstract interface for message remote data source
 abstract class MessageRemoteDataSource {
@@ -49,7 +47,6 @@ abstract class MessageRemoteDataSource {
   });
 }
 
-/// Implementation using Firestore and Supabase Storage
 class MessageRemoteDataSourceImpl implements MessageRemoteDataSource {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -62,6 +59,7 @@ class MessageRemoteDataSourceImpl implements MessageRemoteDataSource {
     DateTime? newerThan,
   ) async {
     try {
+      debugPrint('MessageRepo: getMessages for $groupChatId limit $limit');
       var query = _firestore
           .collection('messages')
           .where('groupMessagesId', isEqualTo: groupChatId);
@@ -198,12 +196,16 @@ class MessageRemoteDataSourceImpl implements MessageRemoteDataSource {
   Future<Stream<List<Map<String, dynamic>>>> getMessagesStream(
     List<String> messageIds,
   ) async {
+    String groupMessId = messageIds.isNotEmpty ? messageIds.first : '';
     return _firestore
         .collection('messages')
+        .where('groupMessagesId', isEqualTo: groupMessId)
+        .orderBy('createdAt', descending: true)
+        .limit(20)
         .snapshots()
-        .map(
-          (snap) => snap.docs.map((d) => {...d.data(), '\$id': d.id}).toList(),
-        );
+        .map((snap) {
+          return snap.docs.map((d) => {...d.data(), '\$id': d.id}).toList();
+        });
   }
 
   @override

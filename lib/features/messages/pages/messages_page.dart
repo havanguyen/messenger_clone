@@ -40,14 +40,6 @@ class _MessagesPageState extends State<MessagesPage> {
   late final TextEditingController textEditingController;
   late final ChatRepositoryImpl chatRepository;
   late final ScrollController _scrollController;
-  late MessageBloc _messageBloc;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    debugPrint('didChangeDependencies MessagesPage called');
-    _messageBloc = BlocProvider.of<MessageBloc>(context);
-  }
 
   @override
   void initState() {
@@ -81,9 +73,7 @@ class _MessagesPageState extends State<MessagesPage> {
     _scrollController
       ..removeListener(_scrollListener)
       ..dispose();
-    if (mounted) {
-      _messageBloc.close();
-    }
+    // Note: Don't close the bloc here - it's managed by BlocProvider's lifecycle
     super.dispose();
   }
 
@@ -116,8 +106,12 @@ class _MessagesPageState extends State<MessagesPage> {
           if (state is MessageLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is MessageError) {
+            debugPrint('MessageError: ${state.error}');
             return Center(
-              child: HeadlineText(state.error, color: context.theme.red),
+              child: HeadlineText(
+                'Something went wrong. Please try again.',
+                color: context.theme.red,
+              ),
             );
           } else if (state is MessageLoaded) {
             return GestureDetector(
@@ -133,7 +127,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           avatarGroupUrl: state.groupMessage.avatarGroupUrl,
                           callFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
+                              debugPrint('Error: meId or others is empty');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -143,7 +137,9 @@ class _MessagesPageState extends State<MessagesPage> {
                               }
                             }
                             if (participants.length < 2) {
-                              debugPrint('Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i');
+                              debugPrint(
+                                'Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i',
+                              );
                               return;
                             }
                             participants.sort();
@@ -160,7 +156,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           },
                           videoCallFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
+                              debugPrint('Error: meId or others is empty');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -208,7 +204,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           user: state.others.first,
                           callFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
+                              debugPrint('Error: meId or others is empty');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -218,7 +214,9 @@ class _MessagesPageState extends State<MessagesPage> {
                               }
                             }
                             if (participants.length < 2) {
-                              debugPrint('Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i');
+                              debugPrint(
+                                'Lá»—i: KhÃ´ng Ä‘á»§ participants Ä‘á»ƒ gá»i',
+                              );
                               return;
                             }
                             participants.sort();
@@ -235,7 +233,7 @@ class _MessagesPageState extends State<MessagesPage> {
                           },
                           videoCallFunc: () async {
                             if (state.meId.isEmpty || state.others.isEmpty) {
-                              debugPrint('Lá»—i: meId hoáº·c others rá»—ng');
+                              debugPrint('Error: meId or others is empty');
                               return;
                             }
                             List<String> participants = [state.meId];
@@ -306,10 +304,17 @@ class _MessagesPageState extends State<MessagesPage> {
         if (state is MessageLoading) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is MessageError) {
+          debugPrint('MessageError: ${state.error}');
           return Center(
-            child: HeadlineText(state.error, color: context.theme.red),
+            child: HeadlineText(
+              'Something went wrong. Please try again.',
+              color: context.theme.red,
+            ),
           );
         } else if (state is MessageLoaded) {
+          debugPrint(
+            'MessagesPage: Rendering ${state.messages.length} messages',
+          );
           return Column(
             children: [
               Expanded(
@@ -317,7 +322,6 @@ class _MessagesPageState extends State<MessagesPage> {
                   controller: _scrollController,
                   reverse: true,
                   itemBuilder: (context, index) {
-                    debugPrint('builder status');
                     if (index == 0) {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -448,5 +452,3 @@ class _MessagesPageState extends State<MessagesPage> {
     );
   }
 }
-
-
